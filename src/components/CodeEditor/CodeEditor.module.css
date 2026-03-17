@@ -4,6 +4,14 @@
   height: 300px;
   background: #1e1e1e;
   border-top: 1px solid #e8e8e8;
+  transition: height 0.3s ease, opacity 0.3s ease;
+}
+
+.container.collapsed {
+  height: 0;
+  border-top: none;
+  overflow: hidden;
+  opacity: 0;
 }
 
 .container.fullscreen {
@@ -19,10 +27,16 @@
 .header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 12px;
   padding: 8px 16px;
   background: #252526;
   border-bottom: 1px solid #3c3c3c;
+  position: relative;
+}
+
+.header :global(.ant-btn) {
+  flex-shrink: 0;
 }
 
 .title {
@@ -30,6 +44,13 @@
   font-size: 14px;
   font-weight: 500;
   color: #cccccc;
+}
+
+.headerActions {
+  position: absolute;
+  right: 16px;
+  display: flex;
+  align-items: center;
 }
 
 .editor {
@@ -46,4 +67,36 @@
 .stats {
   font-size: 12px;
   color: #8c8c8c;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  background: #1e1e1e;
+}
+
+/* 收起状态下底部展开按钮 */
+.collapsedToggleButton {
+  position: fixed;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1001;
+  background: #f5f5f5;
+  border-radius: 4px 4px 0 0;
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
+  padding: 4px;
+}
+
+.collapsedToggleButton :global(.ant-btn) {
+  border: 1px solid #d9d9d9;
+}
+
+.collapsedToggleButton :global(.ant-btn:hover) {
+  background: #fff;
+  border-color: #1890ff;
+  color: #1890ff;
 }

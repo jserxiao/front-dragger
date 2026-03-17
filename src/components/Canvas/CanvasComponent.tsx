@@ -1,6 +1,6 @@
-import React, { useRef, useState, useCallback, useEffect } from 'react';
+import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { Button, Input, Select, Card, Checkbox, Switch, DatePicker, Upload, Divider, Image, Statistic, Typography, Descriptions, TypographyTextProps } from 'antd';
+import { Button, Input, Select, Card, Checkbox, Switch, DatePicker, Upload, Divider, Image, Statistic, Typography, Descriptions, Modal, Drawer, message, notification, Alert, Progress, Spin, Tag, Badge, Avatar, Rate, Slider, Radio, Table } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
 import { ComponentRegistry } from '@/core';
@@ -10,6 +10,161 @@ import AlignmentGuides from './AlignmentGuides';
 import styles from './Canvas.module.css';
 
 const { Text } = Typography;
+
+// Message 组件封装
+const MessageComponent: React.FC<{ type: string; content: string }> = ({ type, content }) => {
+  const iconMap: Record<string, React.ReactNode> = {
+    info: '💡',
+    success: '✅',
+    warning: '⚠️',
+    error: '❌',
+    loading: '⏳',
+  };
+  return (
+    <div style={{
+      padding: '10px 16px',
+      background: '#fff',
+      borderRadius: 8,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: 8,
+    }}>
+      <span>{iconMap[type] || '💡'}</span>
+      <span>{content}</span>
+    </div>
+  );
+};
+
+// Notification 组件封装
+const NotificationComponent: React.FC<{ type: string; message: string; description: string }> = ({ type, message: msg, description }) => {
+  const colorMap: Record<string, string> = {
+    info: '#1890ff',
+    success: '#52c41a',
+    warning: '#faad14',
+    error: '#ff4d4f',
+  };
+  return (
+    <div style={{
+      padding: '16px 24px',
+      background: '#fff',
+      borderRadius: 8,
+      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+      width: 384,
+      borderLeft: `4px solid ${colorMap[type] || '#1890ff'}`,
+    }}>
+      <div style={{ fontWeight: 600, marginBottom: 4 }}>{msg}</div>
+      <div style={{ color: '#666', fontSize: 13 }}>{description}</div>
+    </div>
+  );
+};
+
+/**
+ * 网格数值标注组件
+ */
+interface GridLabelsProps {
+  offset: { x: number; y: number };
+  scale: number;
+  gridSize: number;
+}
+
+const GridLabels: React.FC<GridLabelsProps> = ({ offset, scale, gridSize }) => {
+  // 计算需要显示的网格线标注
+  const labels = useMemo(() => {
+    const result: Array<{ type: 'x' | 'y'; position: number; value: number; screenPos: number }> = [];
+    
+    // 获取视口尺寸
+    if (typeof window === 'undefined') return result;
+    
+    // 计算网格在画布坐标系中的实际尺寸
+    const scaledGridSize = gridSize * scale;
+    
+    // 计算可见区域内的网格线
+    // X 方向
+    const startX = Math.floor(-offset.x / scaledGridSize) * gridSize;
+    const endX = Math.ceil((window.innerWidth - offset.x) / scaledGridSize) * gridSize;
+    
+    for (let value = startX; value <= endX; value += gridSize) {
+      const screenPos = value * scale + offset.x;
+      // 每5格显示一个标签，避免过于密集
+      if (value % (gridSize * 5) === 0 && value !== 0) {
+        result.push({ type: 'x', position: value, value, screenPos });
+      }
+    }
+    
+    // Y 方向
+    const startY = Math.floor(-offset.y / scaledGridSize) * gridSize;
+    const endY = Math.ceil((window.innerHeight - offset.y) / scaledGridSize) * gridSize;
+    
+    for (let value = startY; value <= endY; value += gridSize) {
+      const screenPos = value * scale + offset.y;
+      // 每5格显示一个标签，避免过于密集
+      if (value % (gridSize * 5) === 0 && value !== 0) {
+        result.push({ type: 'y', position: value, value, screenPos });
+      }
+    }
+    
+    return result;
+  }, [offset, scale, gridSize]);
+  
+  return (
+    <g>
+      {labels.map((label, index) => {
+        if (label.type === 'x') {
+          return (
+            <g key={`x-${index}`}>
+              {/* 垂直参考线 */}
+              <line
+                x1={label.screenPos}
+                y1={0}
+                x2={label.screenPos}
+                y2="100%"
+                stroke="#d9d9d9"
+                strokeWidth="1"
+                strokeDasharray="4,4"
+              />
+              {/* 数值标签 */}
+              <text
+                x={label.screenPos + 4}
+                y={Math.max(16, -offset.y + 16)}
+                fontSize="11"
+                fill="#8c8c8c"
+                fontFamily="Arial, sans-serif"
+              >
+                {label.value}
+              </text>
+            </g>
+          );
+        } else {
+          return (
+            <g key={`y-${index}`}>
+              {/* 水平参考线 */}
+              <line
+                x1={0}
+                y1={label.screenPos}
+                x2="100%"
+                y2={label.screenPos}
+                stroke="#d9d9d9"
+                strokeWidth="1"
+                strokeDasharray="4,4"
+              />
+              {/* 数值标签 */}
+              <text
+                x={Math.max(4, -offset.x + 4)}
+                y={label.screenPos + 14}
+                fontSize="11"
+                fill="#8c8c8c"
+                fontFamily="Arial, sans-serif"
+              >
+                {label.value}
+              </text>
+            </g>
+          );
+        }
+      })}
+    </g>
+  );
+};
 
 /**
  * 组件渲染映射
@@ -32,6 +187,32 @@ const ComponentMap: Record<string, React.FC<any>> = {
   Statistic,
   'Typography.Text': Text,
   Descriptions,
+  // 反馈组件
+  Modal: (props: any) => (
+    <Modal {...props} style={{ position: 'relative' }}>
+      {props.children}
+    </Modal>
+  ),
+  Drawer: (props: any) => (
+    <Drawer {...props} style={{ position: 'relative' }}>
+      {props.children}
+    </Drawer>
+  ),
+  Message: MessageComponent,
+  Notification: NotificationComponent,
+  Alert,
+  Progress,
+  Spin,
+  // 展示组件
+  Tag,
+  Badge,
+  Avatar,
+  // 表单组件
+  Rate,
+  Slider,
+  Radio: (props: any) => <Radio.Group {...props}><Radio value="a">选项A</Radio><Radio value="b">选项B</Radio><Radio value="c">选项C</Radio></Radio.Group>,
+  // 数据展示
+  Table,
 };
 
 interface CanvasProps {
@@ -47,6 +228,7 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
   const [isPanning, setIsPanning] = useState(false);
   const [panStart, setPanStart] = useState({ x: 0, y: 0 });
   const [alignmentLines, setAlignmentLines] = useState<AlignmentLine[]>([]);
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
 
   const {
     components,
@@ -62,7 +244,7 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
     dragPreview,
   } = useEditorStore();
 
-  const { scale, offset, gridSize, showGrid, snapToGrid, selectedIds } = canvas;
+  const { scale, offset, gridSize, showGrid, snapToGrid, selectedIds, canvasStyle } = canvas;
 
   // 设置画布为可放置区域
   const { setNodeRef, isOver } = useDroppable({
@@ -107,6 +289,15 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent) => {
+      // 计算鼠标在画布坐标系中的位置
+      const canvasEl = canvasRef.current;
+      if (canvasEl) {
+        const rect = canvasEl.getBoundingClientRect();
+        const x = Math.round((e.clientX - rect.left - offset.x) / scale);
+        const y = Math.round((e.clientY - rect.top - offset.y) / scale);
+        setMousePosition({ x: Math.max(0, x), y: Math.max(0, y) });
+      }
+      
       if (isPanning) {
         setOffset({
           x: e.clientX - panStart.x,
@@ -114,11 +305,16 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
         });
       }
     },
-    [isPanning, panStart, setOffset]
+    [isPanning, panStart, setOffset, offset, scale]
   );
 
   const handleMouseUp = useCallback(() => {
     setIsPanning(false);
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setIsPanning(false);
+    setMousePosition(null);
   }, []);
 
   // 绑定滚轮事件
@@ -345,51 +541,93 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
     >
-      {/* 网格背景 */}
-      {showGrid && (
-        <div
-          className={styles.gridBackground}
-          style={{
-            backgroundPosition: `${offset.x}px ${offset.y}px`,
-            backgroundSize: `${gridSize * scale}px ${gridSize * scale}px`,
-          }}
-        />
+      {/* 鼠标坐标显示 */}
+      {mousePosition && (
+        <div className={styles.mousePosition}>
+          X: {mousePosition.x} | Y: {mousePosition.y}
+        </div>
       )}
-
-      {/* 辅助线 */}
-      {guideLines.map((line) => (
-        <div
-          key={line.id}
-          className={`${styles.guideLine} ${styles[line.type]}`}
-          style={{
-            [line.type === 'horizontal' ? 'top' : 'left']: line.position * scale + (line.type === 'horizontal' ? offset.y : offset.x),
-          }}
-        />
-      ))}
-
-      {/* 对齐参考线 */}
-      <AlignmentGuides lines={alignmentLines} scale={scale} offset={offset} />
-
-      {/* 画布内容 */}
-      <div
-        ref={contentRef}
-        className={styles.content}
-        style={{
-          transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-        }}
-      >
-        {components.map(renderComponent)}
-
-        {components.length === 0 && (
-          <div className={styles.placeholder}>
-            <div className={styles.placeholderIcon}>🎨</div>
-            <div className={styles.placeholderText}>
-              从左侧拖拽组件到此处开始设计
-            </div>
-          </div>
+      
+      {/* 滚动容器 */}
+      <div className={styles.scrollContainer}>
+        {/* 网格背景 */}
+        {showGrid && (
+          <svg
+            className={styles.gridBackgroundSvg}
+            style={{
+              width: canvasStyle.width * scale + 200,
+              height: canvasStyle.height * scale + 200,
+            }}
+          >
+            <defs>
+              <pattern
+                id="gridPattern"
+                width={gridSize * scale}
+                height={gridSize * scale}
+                patternUnits="userSpaceOnUse"
+                x={offset.x % (gridSize * scale)}
+                y={offset.y % (gridSize * scale)}
+              >
+                <path
+                  d={`M ${gridSize * scale} 0 L 0 0 0 ${gridSize * scale}`}
+                  fill="none"
+                  stroke="#ebebeb"
+                  strokeWidth="1"
+                />
+              </pattern>
+            </defs>
+            <rect width="100%" height="100%" fill="url(#gridPattern)" />
+            {/* 网格数值标注 */}
+            <GridLabels
+              offset={offset}
+              scale={scale}
+              gridSize={gridSize}
+            />
+          </svg>
         )}
+
+        {/* 辅助线 */}
+        {guideLines.map((line) => (
+          <div
+            key={line.id}
+            className={`${styles.guideLine} ${styles[line.type]}`}
+            style={{
+              [line.type === 'horizontal' ? 'top' : 'left']: line.position * scale + (line.type === 'horizontal' ? offset.y : offset.x),
+            }}
+          />
+        ))}
+
+        {/* 对齐参考线 */}
+        <AlignmentGuides lines={alignmentLines} scale={scale} offset={offset} />
+
+        {/* 画布内容 */}
+        <div
+          ref={contentRef}
+          className={styles.content}
+          style={{
+            width: canvasStyle.width,
+            height: canvasStyle.height,
+            transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+            backgroundColor: canvasStyle.backgroundColor,
+            backgroundImage: canvasStyle.backgroundImage ? `url(${canvasStyle.backgroundImage})` : undefined,
+            backgroundSize: canvasStyle.backgroundSize,
+            backgroundPosition: canvasStyle.backgroundPosition,
+            backgroundRepeat: canvasStyle.backgroundRepeat,
+          }}
+        >
+          {components.map(renderComponent)}
+
+          {components.length === 0 && (
+            <div className={styles.placeholder}>
+              <div className={styles.placeholderIcon}>🎨</div>
+              <div className={styles.placeholderText}>
+                从左侧拖拽组件到此处开始设计
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {/* 缩放指示器 */}

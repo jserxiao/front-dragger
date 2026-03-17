@@ -77,7 +77,7 @@ export interface ComponentConfig {
 /**
  * 组件分类
  */
-export type ComponentCategory = 'basic' | 'layout' | 'form' | 'display';
+export type ComponentCategory = 'basic' | 'layout' | 'form' | 'display' | 'feedback';
 
 /**
  * 组件分类配置

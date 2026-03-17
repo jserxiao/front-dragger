@@ -7,7 +7,52 @@ import {
   HistoryState,
   ActionType,
   GuideLine,
+  CanvasStyle,
 } from '@/types';
+
+// 本地存储键名
+const STORAGE_KEY = 'front-dragger-state';
+
+// 需要持久化的状态
+interface PersistedState {
+  components: ComponentNode[];
+  canvasStyle: CanvasStyle;
+}
+
+// 从本地存储读取状态
+const loadFromStorage = (): PersistedState | null => {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as PersistedState;
+      return parsed;
+    }
+  } catch (error) {
+    console.error('Failed to load from localStorage:', error);
+  }
+  return null;
+};
+
+// 保存状态到本地存储
+const saveToStorage = (state: PersistedState) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  } catch (error) {
+    console.error('Failed to save to localStorage:', error);
+  }
+};
+
+// 初始化状态
+const savedState = loadFromStorage();
+const initialCanvasStyle: CanvasStyle = savedState?.canvasStyle || {
+  width: 1920,
+  height: 1080,
+  backgroundColor: 'transparent',
+  backgroundImage: '',
+  backgroundSize: 'cover',
+  backgroundPosition: 'center',
+  backgroundRepeat: 'no-repeat',
+};
 
 interface EditorState {
   // 组件树
@@ -60,6 +105,7 @@ interface EditorActions {
   toggleGrid: () => void;
   toggleSnapToGrid: () => void;
   setGridSize: (size: number) => void;
+  setCanvasStyle: (style: Partial<import('@/types').CanvasStyle>) => void;
 
   // 辅助线操作
   addGuideLine: (line: Omit<GuideLine, 'id'>) => void;
@@ -95,8 +141,8 @@ const MAX_HISTORY_SIZE = 50;
 
 export const useEditorStore = create<EditorState & EditorActions>()(
   immer((set, get) => ({
-    // 初始状态
-    components: [],
+    // 初始状态 - 从本地存储恢复
+    components: savedState?.components || [],
     canvas: {
       scale: 1,
       offset: { x: 0, y: 0 },
@@ -106,6 +152,7 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       snapToGrid: true,
       selectedIds: [],
       hoveredId: undefined,
+      canvasStyle: initialCanvasStyle,
     },
     guideLines: [],
     history: [{
@@ -353,6 +400,15 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       });
     },
 
+    setCanvasStyle: (style) => {
+      set((state) => {
+        state.canvas.canvasStyle = {
+          ...state.canvas.canvasStyle,
+          ...style,
+        };
+      });
+    },
+
     // 辅助线操作
     addGuideLine: (line) => {
       set((state) => {
@@ -535,3 +591,21 @@ export const useEditorStore = create<EditorState & EditorActions>()(
     },
   }))
 );
+
+// 订阅状态变化，自动保存到本地存储（防抖处理）
+let saveTimeout: ReturnType<typeof setTimeout> | null = null;
+
+useEditorStore.subscribe((state) => {
+  // 清除之前的定时器
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  
+  // 延迟保存，避免频繁写入
+  saveTimeout = setTimeout(() => {
+    saveToStorage({
+      components: state.components,
+      canvasStyle: state.canvas.canvasStyle,
+    });
+  }, 500);
+});

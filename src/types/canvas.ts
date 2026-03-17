@@ -12,6 +12,23 @@ export interface CanvasState {
   snapToGrid: boolean;
   selectedIds: string[];
   hoveredId?: string;
+  // 画布样式设置
+  canvasStyle: CanvasStyle;
+}
+
+/**
+ * 画布样式设置
+ */
+export interface CanvasStyle {
+  // 画布尺寸
+  width: number;
+  height: number;
+  // 背景设置
+  backgroundColor: string;
+  backgroundImage: string;
+  backgroundSize: 'cover' | 'contain' | 'auto';
+  backgroundPosition: 'center' | 'top' | 'bottom' | 'left' | 'right' | 'top left' | 'top right' | 'bottom left' | 'bottom right';
+  backgroundRepeat: 'no-repeat' | 'repeat' | 'repeat-x' | 'repeat-y';
 }
 
 /**

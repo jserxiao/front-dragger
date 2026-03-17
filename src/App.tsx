@@ -9,6 +9,7 @@ import {
   useSensor,
   useSensors,
   DragOverlay,
+  Modifier,
 } from '@dnd-kit/core';
 import { v4 as uuidv4 } from 'uuid';
 import { ConfigProvider } from 'antd';
@@ -42,6 +43,22 @@ const App: React.FC = () => {
         distance: 1,
       },
     })
+  );
+
+  // 自定义 modifier：让拖拽元素左上角对齐鼠标
+  const topLeftModifier: Modifier = useCallback(
+    ({ transform, draggingNodeRect, transform: { x, y } }) => {
+      if (!draggingNodeRect) {
+        return transform;
+      }
+      // 将默认的中心对齐改为左上角对齐
+      return {
+        ...transform,
+        x: x + draggingNodeRect.width / 2,
+        y: y + draggingNodeRect.height / 2,
+      };
+    },
+    []
   );
 
   // 计算拖拽位置相对于画布的坐标
@@ -142,6 +159,7 @@ const App: React.FC = () => {
         };
         
         if (position) {
+          // 左上角对齐鼠标，不需要减去一半尺寸
           setDragPreview({
             position,
             size,
@@ -218,12 +236,13 @@ const App: React.FC = () => {
         if (!isOverCanvas && !over) return;
 
         // 计算相对于画布的位置
+        // 左上角对齐鼠标，不需要减去一半尺寸
         let x = (endX - canvasRect.left - canvas.offset.x) / canvas.scale;
         let y = (endY - canvasRect.top - canvas.offset.y) / canvas.scale;
 
-        // 确保位置非负
-        x = Math.max(0, x);
-        y = Math.max(0, y);
+        // 确保位置非负，并吸附到最近的整数坐标
+        x = Math.max(0, Math.round(x));
+        y = Math.max(0, Math.round(y));
 
         const newComponent = {
           id: uuidv4(),
@@ -260,14 +279,14 @@ const App: React.FC = () => {
 
         const component = findComponent(components, componentId);
         if (component) {
-          // 计算新位置
+          // 计算新位置，并吸附到最近的整数坐标
           const newX = Math.max(
             0,
-            component.position.x + delta.x / canvas.scale
+            Math.round(component.position.x + delta.x / canvas.scale)
           );
           const newY = Math.max(
             0,
-            component.position.y + delta.y / canvas.scale
+            Math.round(component.position.y + delta.y / canvas.scale)
           );
 
           useEditorStore.getState().moveComponent(componentId, {
@@ -325,7 +344,7 @@ const App: React.FC = () => {
         </div>
 
         {/* 拖拽覆盖层 - 显示拖拽中的预览 */}
-        <DragOverlay dropAnimation={null}>
+        <DragOverlay dropAnimation={null} modifiers={[topLeftModifier]}>
           {activeConfig && (
             <DragItem config={activeConfig} />
           )}

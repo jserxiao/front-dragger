@@ -12,7 +12,39 @@
 }
 
 .canvas.dragOver {
-  background: #e6f7ff;
+  /* 移除拖拽时的背景高亮 */
+}
+
+/* 滚动容器 */
+.scrollContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  overflow: auto;
+  /* 自定义滚动条样式 */
+  scrollbar-width: thin;
+  scrollbar-color: #bfbfbf #f0f0f0;
+}
+
+.scrollContainer::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollContainer::-webkit-scrollbar-track {
+  background: #f0f0f0;
+  border-radius: 4px;
+}
+
+.scrollContainer::-webkit-scrollbar-thumb {
+  background: #bfbfbf;
+  border-radius: 4px;
+}
+
+.scrollContainer::-webkit-scrollbar-thumb:hover {
+  background: #999;
 }
 
 /* 网格背景 */
@@ -26,6 +58,17 @@
     linear-gradient(90deg, #e0e0e0 1px, transparent 1px);
   pointer-events: none;
   z-index: 0;
+}
+
+/* SVG 网格背景 */
+.gridBackgroundSvg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 0;
+  min-width: 100%;
+  min-height: 100%;
 }
 
 /* 辅助线 */
@@ -81,6 +124,8 @@
   min-width: 100%;
   min-height: 100%;
   transform-origin: 0 0;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  border: 1px solid #d9d9d9;
 }
 
 /* 占位符 */
@@ -115,6 +160,21 @@
   border-radius: 4px;
   font-size: 12px;
   pointer-events: none;
+}
+
+/* 鼠标坐标显示 */
+.mousePosition {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  padding: 4px 10px;
+  background: rgba(0, 0, 0, 0.65);
+  color: #fff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: 'Monaco', 'Menlo', monospace;
+  pointer-events: none;
+  z-index: 10;
 }
 
 /* 画布项 */

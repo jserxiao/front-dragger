@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import {
   Input,
   InputNumber,
@@ -8,21 +8,23 @@ import {
   Collapse,
   Empty,
   Button,
+  Tabs,
+  Upload,
 } from 'antd';
 import type { Color } from 'antd/es/color-picker';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SettingOutlined, PictureOutlined, UploadOutlined, AppstoreOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
 import { ComponentRegistry } from '@/core';
-import { PropSchema } from '@/types';
+import { PropSchema, CanvasStyle } from '@/types';
 import styles from './PropertyPanel.module.css';
 
 /**
  * 属性配置面板
  */
 const PropertyPanel: React.FC = () => {
-  const { components, canvas, updateComponent, deleteComponents } =
+  const { components, canvas, updateComponent, deleteComponents, setCanvasStyle, selectComponent, clearSelection } =
     useEditorStore();
-  const { selectedIds } = canvas;
+  const { selectedIds, canvasStyle } = canvas;
 
   // 获取选中的组件
   const selectedComponent = useMemo(() => {
@@ -169,6 +171,157 @@ const PropertyPanel: React.FC = () => {
     }
   };
 
+  // 处理画布样式变更
+  const handleCanvasStyleChange = (key: keyof CanvasStyle, value: unknown) => {
+    setCanvasStyle({ [key]: value });
+  };
+
+  // 处理图片上传
+  const handleImageUpload = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      handleCanvasStyleChange('backgroundImage', e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+    return false;
+  };
+
+  // 渲染画布设置面板
+  const renderCanvasSettings = () => (
+    <div className={styles.canvasSettings}>
+      <Collapse
+        defaultActiveKey={['尺寸', '背景']}
+        ghost
+        items={[
+          {
+            key: '尺寸',
+            label: '尺寸',
+            children: (
+              <div className={styles.propGroup}>
+                <div className={styles.propItem}>
+                  <label className={styles.label}>宽度</label>
+                  <InputNumber
+                    value={canvasStyle.width}
+                    onChange={(v) => handleCanvasStyleChange('width', v ?? 1920)}
+                    min={100}
+                    max={10000}
+                    style={{ width: '100%' }}
+                    suffix="px"
+                  />
+                </div>
+                <div className={styles.propItem}>
+                  <label className={styles.label}>高度</label>
+                  <InputNumber
+                    value={canvasStyle.height}
+                    onChange={(v) => handleCanvasStyleChange('height', v ?? 1080)}
+                    min={100}
+                    max={10000}
+                    style={{ width: '100%' }}
+                    suffix="px"
+                  />
+                </div>
+              </div>
+            ),
+          },
+          {
+            key: '背景',
+            label: '背景',
+            children: (
+              <div className={styles.propGroup}>
+                <div className={styles.propItem}>
+                  <label className={styles.label}>背景颜色</label>
+                  <ColorPicker
+                    value={canvasStyle.backgroundColor}
+                    onChange={(color: Color) => handleCanvasStyleChange('backgroundColor', color.toHexString())}
+                    showText
+                    allowClear
+                  />
+                </div>
+                <div className={styles.propItem}>
+                  <label className={styles.label}>背景图片</label>
+                  <div className={styles.imageUpload}>
+                    {canvasStyle.backgroundImage ? (
+                      <div className={styles.imagePreview}>
+                        <img src={canvasStyle.backgroundImage} alt="背景" />
+                        <Button
+                          size="small"
+                          danger
+                          onClick={() => handleCanvasStyleChange('backgroundImage', '')}
+                        >
+                          移除
+                        </Button>
+                      </div>
+                    ) : (
+                      <Upload
+                        accept="image/*"
+                        showUploadList={false}
+                        beforeUpload={handleImageUpload}
+                      >
+                        <Button icon={<UploadOutlined />} block>
+                          上传图片
+                        </Button>
+                      </Upload>
+                    )}
+                  </div>
+                </div>
+                {canvasStyle.backgroundImage && (
+                  <>
+                    <div className={styles.propItem}>
+                      <label className={styles.label}>背景尺寸</label>
+                      <Select
+                        value={canvasStyle.backgroundSize}
+                        onChange={(v) => handleCanvasStyleChange('backgroundSize', v)}
+                        options={[
+                          { value: 'cover', label: '覆盖' },
+                          { value: 'contain', label: '包含' },
+                          { value: 'auto', label: '原始' },
+                        ]}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div className={styles.propItem}>
+                      <label className={styles.label}>背景位置</label>
+                      <Select
+                        value={canvasStyle.backgroundPosition}
+                        onChange={(v) => handleCanvasStyleChange('backgroundPosition', v)}
+                        options={[
+                          { value: 'center', label: '居中' },
+                          { value: 'top', label: '顶部' },
+                          { value: 'bottom', label: '底部' },
+                          { value: 'left', label: '左侧' },
+                          { value: 'right', label: '右侧' },
+                          { value: 'top left', label: '左上' },
+                          { value: 'top right', label: '右上' },
+                          { value: 'bottom left', label: '左下' },
+                          { value: 'bottom right', label: '右下' },
+                        ]}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                    <div className={styles.propItem}>
+                      <label className={styles.label}>背景重复</label>
+                      <Select
+                        value={canvasStyle.backgroundRepeat}
+                        onChange={(v) => handleCanvasStyleChange('backgroundRepeat', v)}
+                        options={[
+                          { value: 'no-repeat', label: '不重复' },
+                          { value: 'repeat', label: '重复' },
+                          { value: 'repeat-x', label: '水平重复' },
+                          { value: 'repeat-y', label: '垂直重复' },
+                        ]}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+
   // 按分组组织属性
   const groupedProps = useMemo(() => {
     if (!componentConfig) return {};
@@ -268,7 +421,7 @@ const PropertyPanel: React.FC = () => {
               value={selectedComponent?.style?.borderWidth as number}
               onChange={(v: number | null) => handleStyleChange('borderWidth', v)}
               min={0}
-              addonAfter="px"
+              suffix="px"
               style={{ width: '100%' }}
             />
           </div>
@@ -278,7 +431,7 @@ const PropertyPanel: React.FC = () => {
               value={selectedComponent?.style?.borderRadius as number}
               onChange={(v: number | null) => handleStyleChange('borderRadius', v)}
               min={0}
-              addonAfter="px"
+              suffix="px"
               style={{ width: '100%' }}
             />
           </div>
@@ -318,50 +471,169 @@ const PropertyPanel: React.FC = () => {
     return items;
   }, [selectedComponent, groupedProps]);
 
-  if (!selectedComponent) {
-    return (
-      <div className={styles.panel}>
-        <div className={styles.header}>
-          <h3 className={styles.title}>属性配置</h3>
-        </div>
+  // Tab 状态管理
+  const [activeTab, setActiveTab] = useState<string>(selectedComponent ? 'component' : 'canvas');
+
+  // 处理 tab 切换
+  const handleTabChange = (key: string) => {
+    setActiveTab(key);
+    // 切换到画布设置时清除选中状态
+    if (key === 'canvas') {
+      clearSelection();
+    }
+  };
+
+  // 当选中组件时自动切换到组件属性 tab
+  useEffect(() => {
+    if (selectedComponent) {
+      setActiveTab('component');
+    }
+  }, [selectedComponent]);
+
+  // 当取消选中（点击画布空白处）时切换到画布设置 tab
+  useEffect(() => {
+    if (selectedIds.length === 0 && activeTab === 'component') {
+      setActiveTab('canvas');
+    }
+  }, [selectedIds.length, activeTab]);
+
+  // 获取扁平化的组件列表（用于显示）
+  const flattenedComponents = useMemo(() => {
+    const result: Array<{ id: string; name: string; type: string; depth: number }> = [];
+    
+    const flatten = (comps: typeof components, depth: number = 0) => {
+      comps.forEach((comp) => {
+        result.push({
+          id: comp.id,
+          name: comp.name,
+          type: comp.type,
+          depth,
+        });
+        if (comp.children && comp.children.length > 0) {
+          flatten(comp.children, depth + 1);
+        }
+      });
+    };
+    
+    flatten(components);
+    return result;
+  }, [components]);
+
+  // 处理组件列表项点击
+  const handleComponentItemClick = (id: string, multi: boolean = false) => {
+    selectComponent(id, multi);
+  };
+
+  // 处理组件列表项删除
+  const handleComponentItemDelete = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    deleteComponents([id]);
+  };
+
+  // Tabs 配置
+  const tabItems = [
+    {
+      key: 'component',
+      label: '组件属性',
+      icon: <SettingOutlined />,
+      children: selectedComponent ? (
+        <>
+          <div className={styles.componentInfoBar}>
+            <span className={styles.componentType}>{componentConfig?.name}</span>
+            <span className={styles.componentId}>ID: {selectedComponent.id.slice(0, 8)}</span>
+          </div>
+          <div className={styles.content}>
+            <Collapse
+              defaultActiveKey={['布局', '样式', ...Object.keys(groupedProps)]}
+              ghost
+              items={collapseItems}
+            />
+          </div>
+          <div className={styles.footer}>
+            <Button
+              danger
+              icon={<DeleteOutlined />}
+              onClick={() => deleteComponents(selectedIds)}
+              block
+            >
+              删除组件
+            </Button>
+          </div>
+        </>
+      ) : (
         <div className={styles.empty}>
           <Empty
             image={Empty.PRESENTED_IMAGE_SIMPLE}
-            description={selectedIds.length > 1 ? '已选择多个组件' : '请选择组件'}
+            description="请选择组件或在画布设置中查看组件列表"
           />
         </div>
-      </div>
-    );
-  }
+      ),
+    },
+    {
+      key: 'canvas',
+      label: '画布设置',
+      icon: <PictureOutlined />,
+      children: (
+        <>
+          {/* 画布设置 */}
+          {renderCanvasSettings()}
+          {/* 组件列表 */}
+          <div className={styles.componentListSection}>
+            <div className={styles.componentListHeader}>
+              <AppstoreOutlined />
+              <span>组件列表</span>
+              <span className={styles.componentCount}>({flattenedComponents.length})</span>
+            </div>
+            <div className={styles.componentList}>
+              {flattenedComponents.length > 0 ? (
+                flattenedComponents.map((comp) => {
+                  const config = ComponentRegistry.getComponent(comp.type);
+                  const displayName = comp.name || config?.name || comp.type;
+                  return (
+                    <div
+                      key={comp.id}
+                      className={`${styles.componentListItem} ${selectedIds.includes(comp.id) ? styles.selected : ''}`}
+                      style={{ paddingLeft: 12 + comp.depth * 16 }}
+                      onClick={() => handleComponentItemClick(comp.id)}
+                    >
+                      <span className={styles.componentListItemName}>{displayName}</span>
+                      <div className={styles.componentListItemActions}>
+                        <span className={styles.componentListItemType}>{comp.type}</span>
+                        <Button
+                          type="text"
+                          size="small"
+                          icon={<DeleteOutlined />}
+                          className={styles.deleteBtn}
+                          onClick={(e) => handleComponentItemDelete(comp.id, e)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className={styles.emptyList}>
+                  暂无组件
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      ),
+    },
+  ];
 
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
         <h3 className={styles.title}>属性配置</h3>
-        <div className={styles.componentInfo}>
-          <span className={styles.componentType}>{componentConfig?.name}</span>
-          <span className={styles.componentId}>ID: {selectedComponent.id.slice(0, 8)}</span>
-        </div>
       </div>
-
-      <div className={styles.content}>
-        <Collapse
-          defaultActiveKey={['布局', '样式', ...Object.keys(groupedProps)]}
-          ghost
-          items={collapseItems}
-        />
-      </div>
-
-      <div className={styles.footer}>
-        <Button
-          danger
-          icon={<DeleteOutlined />}
-          onClick={() => deleteComponents(selectedIds)}
-          block
-        >
-          删除组件
-        </Button>
-      </div>
+      <Tabs
+        activeKey={activeTab}
+        onChange={handleTabChange}
+        items={tabItems}
+        className={styles.tabs}
+        destroyOnHidden
+      />
     </div>
   );
 };

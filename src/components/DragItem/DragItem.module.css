@@ -11,6 +11,8 @@
   pointer-events: none;
   opacity: 0.95;
   box-sizing: border-box;
+  /* 让左上角对齐鼠标位置（默认是中心对齐，这里通过 transform 调整） */
+  transform: translate(0, 0);
 }
 
 .name {

@@ -2,20 +2,21 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  background: #fff;
-  border-left: 1px solid #e8e8e8;
+  background: #fff7e6;
+  border-left: 1px solid #ffd591;
 }
 
 .header {
   padding: 16px;
-  border-bottom: 1px solid #e8e8e8;
+  border-bottom: 1px solid #ffd591;
+  background: #fff;
 }
 
 .title {
   margin: 0 0 8px;
   font-size: 16px;
   font-weight: 600;
-  color: #1f1f1f;
+  color: #d46b08;
 }
 
 .componentInfo {
@@ -26,13 +27,13 @@
 
 .componentType {
   font-size: 14px;
-  color: #1890ff;
+  color: #fa8c16;
   font-weight: 500;
 }
 
 .componentId {
   font-size: 12px;
-  color: #8c8c8c;
+  color: #d48806;
   font-family: monospace;
 }
 
@@ -46,12 +47,14 @@
   padding: 8px 12px !important;
   font-weight: 500;
   font-size: 13px;
-  background: #fafafa;
-  border-radius: 4px !important;
+  background: #fffbe6;
+  border-radius: 6px !important;
+  color: #d46b08;
 }
 
 .content :global(.ant-collapse-content-box) {
   padding: 12px !important;
+  background: #fff;
 }
 
 .empty {
@@ -75,11 +78,194 @@
 
 .label {
   font-size: 12px;
-  color: #595959;
+  color: #ad6800;
   font-weight: 500;
 }
 
 .footer {
   padding: 12px 16px;
-  border-top: 1px solid #e8e8e8;
+  border-top: 1px solid #ffd591;
+  background: #fff;
+}
+
+/* Tabs 样式 */
+.tabs {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tabs :global(.ant-tabs-nav) {
+  margin-left: 16px;
+  flex-shrink: 0;
+}
+
+.tabs :global(.ant-tabs-tab) {
+  color: #d48806;
+}
+
+.tabs :global(.ant-tabs-tab-active) {
+  color: #fa8c16 !important;
+}
+
+.tabs :global(.ant-tabs-ink-bar) {
+  background: #fa8c16 !important;
+}
+
+.tabs :global(.ant-tabs-content-holder) {
+  flex: 1;
+  overflow: hidden;
+}
+
+.tabs :global(.ant-tabs-content) {
+  height: 100%;
+}
+
+.tabs :global(.ant-tabs-tabpane) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* 组件信息栏 */
+.componentInfoBar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 16px;
+  background: #fffbe6;
+  border-bottom: 1px solid #ffd591;
+}
+
+/* 画布设置面板 */
+.canvasSettings {
+  padding: 8px;
+}
+
+.canvasSettings :global(.ant-collapse-header) {
+  padding: 8px 12px !important;
+  font-weight: 500;
+  font-size: 13px;
+  background: #fffbe6;
+  border-radius: 6px !important;
+  color: #d46b08;
+}
+
+.canvasSettings :global(.ant-collapse-content-box) {
+  padding: 12px !important;
+  background: #fff;
+}
+
+/* 图片上传 */
+.imageUpload {
+  width: 100%;
+}
+
+.imagePreview {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.imagePreview img {
+  width: 100%;
+  max-height: 150px;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid #ffd591;
+}
+
+/* 组件列表区域 */
+.componentListSection {
+  border-bottom: 1px solid #ffd591;
+  background: #fffbe6;
+}
+
+.componentListHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #d46b08;
+}
+
+.componentCount {
+  font-size: 12px;
+  color: #d48806;
+  font-weight: 400;
+}
+
+.componentList {
+  max-height: 200px;
+  overflow-y: auto;
+  background: #fff;
+}
+
+.componentListItem {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-bottom: 1px solid #fff7e6;
+  transition: background-color 0.2s;
+}
+
+.componentListItem:hover {
+  background: #fffbe6;
+}
+
+.componentListItem.selected {
+  background: #ffe7ba;
+  border-left: 3px solid #fa8c16;
+}
+
+.componentListItemName {
+  font-size: 13px;
+  color: #4a5a6a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.componentListItemType {
+  font-size: 11px;
+  color: #d48806;
+  background: #fff7e6;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.componentListItemActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.deleteBtn {
+  opacity: 0;
+  color: #ff4d4f;
+  padding: 0 4px;
+  height: 20px;
+  width: 20px;
+}
+
+.componentListItem:hover .deleteBtn {
+  opacity: 1;
+}
+
+.deleteBtn:hover {
+  color: #ff7875;
+  background: rgba(255, 77, 79, 0.1);
+}
+
+.emptyList {
+  padding: 24px 16px;
+  text-align: center;
+  color: #d48806;
+  font-size: 13px;
 }

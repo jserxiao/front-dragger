@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
-import Editor, { Monaco, OnMount } from '@monaco-editor/react';
+import Editor, { Monaco, OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
 import { Button, message, Tooltip, Space } from 'antd';
 import {
@@ -9,10 +9,19 @@ import {
   FullscreenOutlined,
   FullscreenExitOutlined,
   SyncOutlined,
+  DownOutlined,
+  UpOutlined,
 } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
 import { codeGenerator, codeParser } from '@/core';
 import styles from './CodeEditor.module.css';
+
+// 配置 Monaco 使用国内 CDN 加速
+loader.config({
+  paths: {
+    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs'
+  }
+});
 
 /**
  * 代码编辑器组件
@@ -21,6 +30,7 @@ const CodeEditor: React.FC = () => {
   const { components, replaceComponents } = useEditorStore();
   const [code, setCode] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const [isFormatLoading, setIsFormatLoading] = useState(false);
   const [isApplying, setIsApplying] = useState(false);
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
@@ -188,6 +198,11 @@ const CodeEditor: React.FC = () => {
     setIsFullscreen(!isFullscreen);
   }, [isFullscreen]);
 
+  // 切换收起/展开
+  const toggleCollapsed = useCallback(() => {
+    setIsCollapsed(!isCollapsed);
+  }, [isCollapsed]);
+
   // 处理代码变化
   const handleCodeChange = useCallback((value: string | undefined) => {
     // 忽略外部更新触发的变化
@@ -199,49 +214,73 @@ const CodeEditor: React.FC = () => {
   }, []);
 
   return (
-    <div className={`${styles.container} ${isFullscreen ? styles.fullscreen : ''}`}>
-      <div className={styles.header}>
+    <>
+      {/* 收起状态下显示在底部的展开按钮 */}
+      {isCollapsed && !isFullscreen && (
+        <div className={styles.collapsedToggleButton}>
+          <Tooltip title="展开代码面板">
+            <Button
+              size="small"
+              icon={<UpOutlined />}
+              onClick={toggleCollapsed}
+            />
+          </Tooltip>
+        </div>
+      )}
+      
+      <div className={`${styles.container} ${isFullscreen ? styles.fullscreen : ''} ${isCollapsed ? styles.collapsed : ''}`}>
+        <div className={styles.header}>
+        {/* 收起/展开按钮 - 放在 header 左侧 */}
+        <Tooltip title={isCollapsed ? '展开代码面板' : '收起代码面板'}>
+          <Button
+            size="small"
+            icon={isCollapsed ? <UpOutlined /> : <DownOutlined />}
+            onClick={toggleCollapsed}
+          />
+        </Tooltip>
         <h3 className={styles.title}>生成的代码</h3>
-        <Space size="small">
-          <Tooltip title="应用到画布 (Ctrl+S)">
-            <Button
-              size="small"
-              type="primary"
-              icon={<SyncOutlined />}
-              onClick={handleApplyCode}
-              loading={isApplying}
-            />
-          </Tooltip>
-          <Tooltip title="格式化">
-            <Button
-              size="small"
-              icon={<FormatPainterOutlined />}
-              onClick={handleFormat}
-              loading={isFormatLoading}
-            />
-          </Tooltip>
-          <Tooltip title="复制">
-            <Button
-              size="small"
-              icon={<CopyOutlined />}
-              onClick={handleCopy}
-            />
-          </Tooltip>
-          <Tooltip title="下载">
-            <Button
-              size="small"
-              icon={<DownloadOutlined />}
-              onClick={handleDownload}
-            />
-          </Tooltip>
-          <Tooltip title={isFullscreen ? '退出全屏' : '全屏'}>
-            <Button
-              size="small"
-              icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
-              onClick={toggleFullscreen}
-            />
-          </Tooltip>
-        </Space>
+        <div className={styles.headerActions}>
+          <Space size="small">
+            <Tooltip title="应用到画布 (Ctrl+S)">
+              <Button
+                size="small"
+                type="primary"
+                icon={<SyncOutlined />}
+                onClick={handleApplyCode}
+                loading={isApplying}
+              />
+            </Tooltip>
+            <Tooltip title="格式化">
+              <Button
+                size="small"
+                icon={<FormatPainterOutlined />}
+                onClick={handleFormat}
+                loading={isFormatLoading}
+              />
+            </Tooltip>
+            <Tooltip title="复制">
+              <Button
+                size="small"
+                icon={<CopyOutlined />}
+                onClick={handleCopy}
+              />
+            </Tooltip>
+            <Tooltip title="下载">
+              <Button
+                size="small"
+                icon={<DownloadOutlined />}
+                onClick={handleDownload}
+              />
+            </Tooltip>
+            <Tooltip title={isFullscreen ? '退出全屏' : '全屏'}>
+              <Button
+                size="small"
+                icon={isFullscreen ? <FullscreenExitOutlined /> : <FullscreenOutlined />}
+                onClick={toggleFullscreen}
+              />
+            </Tooltip>
+          </Space>
+        </div>
       </div>
 
       <div className={styles.editor}>
@@ -254,6 +293,12 @@ const CodeEditor: React.FC = () => {
           value={code}
           onChange={handleCodeChange}
           onMount={handleEditorMount}
+          loading={
+            <div className={styles.loading}>
+              <SyncOutlined spin style={{ fontSize: 24, color: '#1890ff' }} />
+              <span style={{ marginTop: 8, color: '#8c8c8c' }}>加载编辑器中...</span>
+            </div>
+          }
           options={{
             minimap: { enabled: false },
             fontSize: 13,
@@ -276,7 +321,8 @@ const CodeEditor: React.FC = () => {
           {components.length} 个组件 | {code.split('\n').length} 行代码
         </span>
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 
