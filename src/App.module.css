@@ -1,0 +1,36 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background: #f0f2f5;
+}
+
+.main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.left {
+  width: 260px;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.center {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.right {
+  width: 300px;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+.bottom {
+  flex-shrink: 0;
+}
