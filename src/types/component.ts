@@ -12,7 +12,10 @@ export interface ComponentNode {
   children: ComponentNode[];
   position: Position;
   size: Size;
+  // 父级组件 ID
   parentId?: string;
+  // 相对于父级的位置（如果有父级）
+  relativePosition?: Position;
   // Drawer/Modal 关联的触发组件 ID
   triggerComponentId?: string;
   // 用户自定义属性（通过 JSON 输入）

@@ -10,21 +10,30 @@ import {
   Button,
   Tabs,
   Upload,
+  Modal,
 } from 'antd';
 import type { Color } from 'antd/es/color-picker';
-import { DeleteOutlined, SettingOutlined, PictureOutlined, UploadOutlined, AppstoreOutlined, PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SettingOutlined, PictureOutlined, UploadOutlined, AppstoreOutlined, PlusOutlined, MinusCircleOutlined, LinkOutlined, DisconnectOutlined } from '@ant-design/icons';
+import { v4 as uuidv4 } from 'uuid';
 import { useEditorStore } from '@/store';
 import { ComponentRegistry } from '@/core';
-import { PropSchema, CanvasStyle } from '@/types';
+import { PropSchema, CanvasStyle, ComponentConfig } from '@/types';
 import styles from './PropertyPanel.module.css';
 
 /**
  * 属性配置面板
  */
 const PropertyPanel: React.FC = () => {
-  const { components, canvas, updateComponent, deleteComponents, setCanvasStyle, selectComponent, clearSelection } =
+  const { components, canvas, updateComponent, deleteComponents, setCanvasStyle, selectComponent, clearSelection, setParentComponent, getAllComponents, getComponentById, addComponent } =
     useEditorStore();
   const { selectedIds, canvasStyle } = canvas;
+
+  // 选择父级弹框状态
+  const [parentSelectVisible, setParentSelectVisible] = useState(false);
+  // 选择子级弹框状态
+  const [childSelectVisible, setChildSelectVisible] = useState(false);
+  // 相对坐标输入状态
+  const [relativePosInput, setRelativePosInput] = useState({ x: 0, y: 0 });
 
   // 自定义属性的本地状态（键值对数组形式）
   const [extraPropsList, setExtraPropsList] = useState<Array<{ key: string; value: string }>>([]);
@@ -89,10 +98,19 @@ const PropertyPanel: React.FC = () => {
     });
   };
 
-  // 同步 extraProps 到本地状态
+  // 同步 props 和 extraProps 到本地状态（合并显示）
   useEffect(() => {
-    if (selectedComponent?.extraProps) {
-      const list = Object.entries(selectedComponent.extraProps).map(([key, value]) => ({
+    if (selectedComponent) {
+      // 合并 props 和 extraProps
+      const mergedProps: Record<string, any> = {
+        ...selectedComponent.props,
+        ...selectedComponent.extraProps,
+      };
+      
+      // 过滤掉 children 属性（不显示）
+      const { children: _, ...filteredProps } = mergedProps;
+      
+      const list = Object.entries(filteredProps).map(([key, value]) => ({
         key,
         value: valueToString(value),
       }));
@@ -100,7 +118,7 @@ const PropertyPanel: React.FC = () => {
     } else {
       setExtraPropsList([{ key: '', value: '' }]);
     }
-  }, [selectedComponent?.id, selectedComponent?.extraProps]);
+  }, [selectedComponent?.id, selectedComponent?.props, selectedComponent?.extraProps]);
 
   // 处理样式变更
   const handleStyleChange = (styleProp: string, value: unknown) => {
@@ -380,28 +398,33 @@ const PropertyPanel: React.FC = () => {
   const collapseItems = useMemo(() => {
     const items = [];
 
-    // 布局属性
+    // 布局属性（有父级的组件不显示X、Y坐标）
     items.push({
       key: '布局',
       label: '布局',
       children: (
         <div className={styles.propGroup}>
-          <div className={styles.propItem}>
-            <label className={styles.label}>X 坐标</label>
-            <InputNumber
-              value={selectedComponent?.position.x}
-              onChange={(v: number | null) => handlePositionChange('x', v ?? 0)}
-              style={{ width: '100%' }}
-            />
-          </div>
-          <div className={styles.propItem}>
-            <label className={styles.label}>Y 坐标</label>
-            <InputNumber
-              value={selectedComponent?.position.y}
-              onChange={(v: number | null) => handlePositionChange('y', v ?? 0)}
-              style={{ width: '100%' }}
-            />
-          </div>
+          {/* 无父级组件才显示X、Y坐标 */}
+          {!selectedComponent?.parentId && (
+            <>
+              <div className={styles.propItem}>
+                <label className={styles.label}>X 坐标</label>
+                <InputNumber
+                  value={selectedComponent?.position.x}
+                  onChange={(v: number | null) => handlePositionChange('x', v ?? 0)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+              <div className={styles.propItem}>
+                <label className={styles.label}>Y 坐标</label>
+                <InputNumber
+                  value={selectedComponent?.position.y}
+                  onChange={(v: number | null) => handlePositionChange('y', v ?? 0)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </>
+          )}
           <div className={styles.propItem}>
             <label className={styles.label}>宽度</label>
             <Input
@@ -523,16 +546,16 @@ const PropertyPanel: React.FC = () => {
                     setExtraPropsList(newList);
                   }}
                   onBlur={() => {
-                    // 提交更新
-                    const props: Record<string, any> = {};
+                    // 提交更新：将所有属性保存到 extraProps
+                    const newExtraProps: Record<string, any> = {};
                     extraPropsList.forEach(p => {
                       if (p.key.trim()) {
-                        props[p.key.trim()] = parseValue(p.value);
+                        newExtraProps[p.key.trim()] = parseValue(p.value);
                       }
                     });
                     if (selectedComponent) {
                       updateComponent(selectedComponent.id, {
-                        extraProps: Object.keys(props).length > 0 ? props : undefined,
+                        extraProps: Object.keys(newExtraProps).length > 0 ? newExtraProps : undefined,
                       });
                     }
                   }}
@@ -547,16 +570,16 @@ const PropertyPanel: React.FC = () => {
                     setExtraPropsList(newList);
                   }}
                   onBlur={() => {
-                    // 提交更新
-                    const props: Record<string, any> = {};
+                    // 提交更新：将所有属性保存到 extraProps
+                    const newExtraProps: Record<string, any> = {};
                     extraPropsList.forEach(p => {
                       if (p.key.trim()) {
-                        props[p.key.trim()] = parseValue(p.value);
+                        newExtraProps[p.key.trim()] = parseValue(p.value);
                       }
                     });
                     if (selectedComponent) {
                       updateComponent(selectedComponent.id, {
-                        extraProps: Object.keys(props).length > 0 ? props : undefined,
+                        extraProps: Object.keys(newExtraProps).length > 0 ? newExtraProps : undefined,
                       });
                     }
                   }}
@@ -571,16 +594,16 @@ const PropertyPanel: React.FC = () => {
                       newList.push({ key: '', value: '' });
                     }
                     setExtraPropsList(newList);
-                    // 提交更新
-                    const props: Record<string, any> = {};
+                    // 提交更新：将所有属性保存到 extraProps
+                    const newExtraProps: Record<string, any> = {};
                     newList.forEach(p => {
                       if (p.key.trim()) {
-                        props[p.key.trim()] = parseValue(p.value);
+                        newExtraProps[p.key.trim()] = parseValue(p.value);
                       }
                     });
                     if (selectedComponent) {
                       updateComponent(selectedComponent.id, {
-                        extraProps: Object.keys(props).length > 0 ? props : undefined,
+                        extraProps: Object.keys(newExtraProps).length > 0 ? newExtraProps : undefined,
                       });
                     }
                   }}
@@ -604,8 +627,134 @@ const PropertyPanel: React.FC = () => {
       ),
     });
 
+    // 父子级关系面板
+    if (selectedComponent) {
+      const parentComponent = selectedComponent.parentId ? getComponentById(selectedComponent.parentId) : null;
+      
+      items.push({
+        key: 'parentChild',
+        label: '父子级关系',
+        children: (
+          <div className={styles.propGroup}>
+            {/* 父级设置 */}
+            <div className={styles.propItem}>
+              <label className={styles.label}>父级组件</label>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {parentComponent ? (
+                  <>
+                    <span className={styles.parentName}>{parentComponent.name}</span>
+                    <span className={styles.parentId}>({parentComponent.id.slice(0, 8)}...)</span>
+                    <Button
+                      size="small"
+                      icon={<DisconnectOutlined />}
+                      onClick={() => {
+                        setParentComponent(selectedComponent.id, null);
+                      }}
+                      danger
+                    >
+                      解除
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <span className={styles.noParent}>无父级（独立组件）</span>
+                    <Button
+                      size="small"
+                      icon={<LinkOutlined />}
+                      onClick={() => setParentSelectVisible(true)}
+                    >
+                      绑定父级
+                    </Button>
+                  </>
+                )}
+              </div>
+            </div>
+            
+            {/* 相对父级位置 */}
+            {selectedComponent.parentId && (
+              <>
+                <div className={styles.propItem}>
+                  <label className={styles.label}>相对X坐标</label>
+                  <InputNumber
+                    value={selectedComponent.relativePosition?.x ?? 0}
+                    onChange={(value) => {
+                      updateComponent(selectedComponent.id, {
+                        relativePosition: {
+                          x: value ?? 0,
+                          y: selectedComponent.relativePosition?.y ?? 0,
+                        },
+                      });
+                    }}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div className={styles.propItem}>
+                  <label className={styles.label}>相对Y坐标</label>
+                  <InputNumber
+                    value={selectedComponent.relativePosition?.y ?? 0}
+                    onChange={(value) => {
+                      updateComponent(selectedComponent.id, {
+                        relativePosition: {
+                          x: selectedComponent.relativePosition?.x ?? 0,
+                          y: value ?? 0,
+                        },
+                      });
+                    }}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </>
+            )}
+            
+            {/* 子级列表 */}
+            <div className={styles.propItem} style={{ flexDirection: 'column' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                <label className={styles.label} style={{ marginBottom: 0 }}>子级组件</label>
+                <Button
+                  size="small"
+                  icon={<PlusOutlined />}
+                  onClick={() => setChildSelectVisible(true)}
+                >
+                  添加子级
+                </Button>
+              </div>
+              {selectedComponent.children && selectedComponent.children.length > 0 ? (
+                <div className={styles.childrenList}>
+                  {selectedComponent.children.map((child) => (
+                    <div key={child.id} className={styles.childItem}>
+                      <span className={styles.childName}>{child.name}</span>
+                      <span className={styles.childId}>({child.id.slice(0, 8)}...)</span>
+                      <Button
+                        size="small"
+                        type="link"
+                        onClick={() => selectComponent(child.id)}
+                      >
+                        选中
+                      </Button>
+                      <Button
+                        size="small"
+                        type="text"
+                        icon={<DisconnectOutlined />}
+                        onClick={() => {
+                          // 解除子级绑定
+                          setParentComponent(child.id, null);
+                        }}
+                        danger
+                      />
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <span className={styles.noChildren}>暂无子级组件</span>
+              )}
+            </div>
+          </div>
+        ),
+      });
+    }
+
     return items;
-  }, [selectedComponent, groupedProps, extraPropsList]);
+  }, [selectedComponent, groupedProps, extraPropsList, getAllComponents, getComponentById, setParentComponent, updateComponent, selectComponent]);
 
   // Tab 状态管理
   const [activeTab, setActiveTab] = useState<string>(selectedComponent ? 'component' : 'canvas');
@@ -635,18 +784,19 @@ const PropertyPanel: React.FC = () => {
 
   // 获取扁平化的组件列表（用于显示）
   const flattenedComponents = useMemo(() => {
-    const result: Array<{ id: string; name: string; type: string; depth: number }> = [];
+    const result: Array<{ id: string; name: string; type: string; depth: number; parentId?: string }> = [];
     
-    const flatten = (comps: typeof components, depth: number = 0) => {
+    const flatten = (comps: typeof components, depth: number = 0, parentId?: string) => {
       comps.forEach((comp) => {
         result.push({
           id: comp.id,
           name: comp.name,
           type: comp.type,
           depth,
+          parentId: comp.parentId || parentId,
         });
         if (comp.children && comp.children.length > 0) {
-          flatten(comp.children, depth + 1);
+          flatten(comp.children, depth + 1, comp.id);
         }
       });
     };
@@ -680,7 +830,7 @@ const PropertyPanel: React.FC = () => {
           </div>
           <div className={styles.content}>
             <Collapse
-              defaultActiveKey={['布局', '样式', ...Object.keys(groupedProps)]}
+              defaultActiveKey={['布局', '样式', ...Object.keys(groupedProps), 'extraProps', 'parentChild']}
               ghost
               items={collapseItems}
             />
@@ -732,7 +882,13 @@ const PropertyPanel: React.FC = () => {
                       style={{ paddingLeft: 12 + comp.depth * 16 }}
                       onClick={() => handleComponentItemClick(comp.id)}
                     >
-                      <span className={styles.componentListItemName}>{displayName}</span>
+                      <div className={styles.componentListItemInfo}>
+                        <span className={styles.componentListItemName}>{displayName}</span>
+                        <span className={styles.componentListItemId}>ID: {comp.id.slice(0, 8)}...</span>
+                        {comp.parentId && (
+                          <span className={styles.componentListItemParentId}>父级: {comp.parentId.slice(0, 8)}...</span>
+                        )}
+                      </div>
                       <div className={styles.componentListItemActions}>
                         <span className={styles.componentListItemType}>{comp.type}</span>
                         <Button
@@ -770,6 +926,138 @@ const PropertyPanel: React.FC = () => {
         className={styles.tabs}
         destroyOnHidden
       />
+      
+      {/* 选择父级组件弹框 */}
+      <Modal
+        title="选择父级组件"
+        open={parentSelectVisible}
+        onCancel={() => setParentSelectVisible(false)}
+        footer={null}
+        width={400}
+      >
+        {/* 相对坐标设置 */}
+        <div className={styles.relativePosSection}>
+          <div className={styles.relativePosItem}>
+            <label>相对 X 坐标：</label>
+            <InputNumber
+              value={relativePosInput.x}
+              onChange={(v) => setRelativePosInput({ ...relativePosInput, x: v ?? 0 })}
+              style={{ width: 120 }}
+            />
+          </div>
+          <div className={styles.relativePosItem}>
+            <label>相对 Y 坐标：</label>
+            <InputNumber
+              value={relativePosInput.y}
+              onChange={(v) => setRelativePosInput({ ...relativePosInput, y: v ?? 0 })}
+              style={{ width: 120 }}
+            />
+          </div>
+        </div>
+        <div className={styles.parentSelectList}>
+          {(() => {
+            const allComponents = getAllComponents();
+            // 过滤掉自己和自己的子级
+            const availableParents = allComponents.filter((comp) => {
+              if (comp.id === selectedComponent?.id) return false;
+              // TODO: 还需要过滤掉自己的子级
+              return true;
+            });
+            
+            if (availableParents.length === 0) {
+              return <div className={styles.emptyList}>没有可选的父级组件</div>;
+            }
+            
+            return availableParents.map((comp) => (
+              <div
+                key={comp.id}
+                className={styles.parentSelectItem}
+                onClick={() => {
+                  if (selectedComponent) {
+                    setParentComponent(selectedComponent.id, comp.id, { x: relativePosInput.x, y: relativePosInput.y });
+                    setParentSelectVisible(false);
+                    setRelativePosInput({ x: 0, y: 0 });
+                  }
+                }}
+              >
+                <span className={styles.parentSelectName}>{comp.name}</span>
+                <span className={styles.parentSelectType}>{comp.type}</span>
+              </div>
+            ));
+          })()}
+        </div>
+      </Modal>
+      
+      {/* 选择子级组件弹框 - 从组件库选择 */}
+      <Modal
+        title="添加子级组件"
+        open={childSelectVisible}
+        onCancel={() => setChildSelectVisible(false)}
+        footer={null}
+        width={400}
+      >
+        {/* 相对坐标设置 */}
+        <div className={styles.relativePosSection}>
+          <div className={styles.relativePosItem}>
+            <label>相对 X 坐标：</label>
+            <InputNumber
+              value={relativePosInput.x}
+              onChange={(v) => setRelativePosInput({ ...relativePosInput, x: v ?? 0 })}
+              style={{ width: 120 }}
+            />
+          </div>
+          <div className={styles.relativePosItem}>
+            <label>相对 Y 坐标：</label>
+            <InputNumber
+              value={relativePosInput.y}
+              onChange={(v) => setRelativePosInput({ ...relativePosInput, y: v ?? 0 })}
+              style={{ width: 120 }}
+            />
+          </div>
+        </div>
+        <div className={styles.parentSelectList}>
+          {(() => {
+            // 从组件库获取所有组件类型
+            const componentLibrary = ComponentRegistry.getAllComponents();
+            
+            if (componentLibrary.length === 0) {
+              return <div className={styles.emptyList}>组件库为空</div>;
+            }
+            
+            return componentLibrary.map((config: ComponentConfig) => (
+              <div
+                key={config.type}
+                className={styles.parentSelectItem}
+                onClick={() => {
+                  if (selectedComponent) {
+                    // 创建新的子组件
+                    const newComponent = {
+                      id: uuidv4(),
+                      type: config.type,
+                      name: config.name,
+                      props: {}, // props 保持空，所有属性放入 extraProps
+                      style: { ...config.defaultStyle },
+                      children: [],
+                      position: { x: 0, y: 0 },
+                      size: { ...config.defaultSize },
+                      parentId: selectedComponent.id,
+                      relativePosition: { x: relativePosInput.x, y: relativePosInput.y },
+                      // 所有属性（包括 defaultProps 和 className）放入 extraProps
+                      extraProps: { ...config.defaultProps, className: config.type.toLowerCase() },
+                    };
+                    addComponent(newComponent, selectedComponent.id);
+                    setChildSelectVisible(false);
+                    setRelativePosInput({ x: 0, y: 0 });
+                  }
+                }}
+              >
+                <span className={styles.parentSelectName}>{config.name}</span>
+                <span className={styles.parentSelectType}>{config.type}</span>
+              </div>
+            ));
+          })()}
+        </div>
+      </Modal>
     </div>
   );
 };

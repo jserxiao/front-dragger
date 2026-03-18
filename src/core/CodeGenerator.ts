@@ -180,9 +180,11 @@ ${jsx}
       props.onClose = { __jsExpr: `() => set${overlayRelation.stateName.charAt(0).toUpperCase() + overlayRelation.stateName.slice(1)}(false)` };
     }
 
-    // 合并用户自定义属性 (extraProps)
+    // 合并用户自定义属性 (extraProps)，但排除 className（它用于生成 CSS 类名）
     if (component.extraProps) {
       Object.entries(component.extraProps).forEach(([key, value]) => {
+        // className 由 generateStyle 处理，这里跳过
+        if (key === 'className') return;
         // 如果值是字符串且需要作为 JS 表达式（如事件处理函数），直接作为表达式
         if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('(') || value.startsWith('function'))) {
           props[key] = { __jsExpr: value };
@@ -202,9 +204,10 @@ ${jsx}
       return `${spaces}<${type}${propsStr}>\n${childrenJSX}\n${spaces}</${type}>`;
     }
 
-    // 处理文本内容
-    if (component.props.children && typeof component.props.children === 'string') {
-      return `${spaces}<${type}${propsStr}>${component.props.children}</${type}>`;
+    // 处理文本内容（优先从 extraProps 获取，兼容旧数据从 props 获取）
+    const childrenText = component.extraProps?.children || component.props.children;
+    if (childrenText && typeof childrenText === 'string') {
+      return `${spaces}<${type}${propsStr}>${childrenText}</${type}>`;
     }
 
     // 自闭合标签
@@ -252,8 +255,9 @@ ${jsx}
    * 生成样式对象 - 使用 CSS Module 的 className
    */
   private generateStyle(component: ComponentNode): Record<string, any> {
-    // 使用 CSS Module 方式: className={styles.componentXxx}
-    const classNameKey = `component-${component.id.slice(0, 8)}`;
+    // 优先使用 extraProps.className，否则使用组件类型（小写）+ 哈希值
+    const baseClassName = component.extraProps?.className || component.type.toLowerCase();
+    const classNameKey = `${baseClassName}-${component.id.slice(0, 8)}`;
     // 返回一个特殊对象标记，表示这是 JS 表达式
     return { className: { __jsExpr: `styles['${classNameKey}']` } };
   }
@@ -265,7 +269,9 @@ ${jsx}
     const cssRules: string[] = [];
 
     const processComponent = (component: ComponentNode) => {
-      const className = `component-${component.id.slice(0, 8)}`;
+      // 优先使用 extraProps.className，否则使用组件类型（小写）+ 哈希值
+      const baseClassName = component.extraProps?.className || component.type.toLowerCase();
+      const className = `${baseClassName}-${component.id.slice(0, 8)}`;
       const rules: string[] = [];
 
       const { size, style } = component;

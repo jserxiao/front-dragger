@@ -16,7 +16,6 @@ import {
   RedoOutlined,
   DeleteOutlined,
   ClearOutlined,
-  EyeOutlined,
   DownloadOutlined,
   UploadOutlined,
   SettingOutlined,
@@ -25,7 +24,6 @@ import {
   SnippetsOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
-  BorderOutlined,
   DragOutlined,
 } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
@@ -64,16 +62,15 @@ const Toolbar: React.FC = () => {
   
   // 计算撤销/重做是否可用
   // 撤销：有历史记录可以撤销
-  // 重做：画布上有组件时就不禁用
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const undoDisabled = historyIndex <= 0;
+  // 重做：画布上有组件时就不禁用
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const redoDisabled = components.length === 0;
 
   // 导入 JSON 的 Modal
   const [importModalVisible, setImportModalVisible] = useState(false);
   const [importJson, setImportJson] = useState('');
-
-  // 设置 Modal
-  const [settingsVisible, setSettingsVisible] = useState(false);
 
   // 撤销
   const handleUndo = useCallback(() => {

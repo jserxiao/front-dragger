@@ -1,7 +1,6 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { useDraggable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { ResizeObserver } from '@juggle/resize-observer';
 import { useEditorStore } from '@/store';
 import { ComponentNode } from '@/types';
 import styles from './Canvas.module.css';
@@ -11,8 +10,9 @@ interface CanvasItemProps {
   isSelected: boolean;
   onSelect: (id: string, multi?: boolean) => void;
   onHover: (id?: string) => void;
-  onCalculateAlignment: (id: string, position: { x: number; y: number }, size: { width: number; height: number }) => void;
-  onClearAlignment: () => void;
+  // onCalculateAlignment 和 onClearAlignment 暂时未使用，保留供后续扩展
+  onCalculateAlignment?: (id: string, position: { x: number; y: number }, size: { width: number; height: number }) => void;
+  onClearAlignment?: () => void;
   children: React.ReactNode;
 }
 
@@ -24,8 +24,8 @@ const CanvasItem: React.FC<CanvasItemProps> = ({
   isSelected,
   onSelect,
   onHover,
-  onCalculateAlignment,
-  onClearAlignment,
+  // onCalculateAlignment, // 暂未使用
+  // onClearAlignment, // 暂未使用
   children,
 }) => {
   const itemRef = useRef<HTMLDivElement>(null);
@@ -167,8 +167,9 @@ const CanvasItem: React.FC<CanvasItemProps> = ({
 
   const style: React.CSSProperties = {
     position: 'absolute',
-    left: component.position.x,
-    top: component.position.y,
+    // 如果有父级且不是通过 dnd-kit 拖拽，使用相对位置
+    left: component.parentId && !transform ? (component.relativePosition?.x ?? 0) : component.position.x,
+    top: component.parentId && !transform ? (component.relativePosition?.y ?? 0) : component.position.y,
     width: component.size.width,
     height: component.size.height,
     transform: CSS.Translate.toString(transform),

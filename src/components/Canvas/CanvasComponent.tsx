@@ -1,6 +1,6 @@
 import React, { useRef, useState, useCallback, useEffect, useMemo } from 'react';
 import { useDroppable } from '@dnd-kit/core';
-import { Button, Input, Select, Card, Checkbox, Switch, DatePicker, Upload, Divider, Image, Statistic, Typography, Descriptions, Modal, Drawer, message, notification, Alert, Progress, Spin, Tag, Badge, Avatar, Rate, Slider, Radio, Table } from 'antd';
+import { Button, Input, Select, Card, Checkbox, Switch, DatePicker, Upload, Divider, Image, Statistic, Typography, Descriptions, Modal, Drawer, Alert, Progress, Spin, Tag, Badge, Avatar, Rate, Slider, Radio, Table } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
 import { ComponentRegistry } from '@/core';
@@ -261,13 +261,13 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
     setAlignmentSnap,
     clearSelection,
     setHoveredId,
-    addComponent,
-    setDragOverCanvas,
+    // addComponent, // 未使用
+    // setDragOverCanvas, // 未使用
     dragPreview,
     alignmentSnap,
   } = useEditorStore();
 
-  const { scale, offset, gridSize, showGrid, snapToGrid, selectedIds, canvasStyle } = canvas;
+  const { scale, offset, gridSize, showGrid, /* snapToGrid, */ selectedIds, canvasStyle } = canvas;
 
   // 设置画布为可放置区域
   const { setNodeRef, isOver } = useDroppable({
@@ -545,10 +545,16 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
     }
 
     const isSelected = selectedIds.includes(component.id);
-    const config = ComponentRegistry.getComponent(component.type);
+    // 获取组件配置（用于后续扩展）
+    ComponentRegistry.getComponent(component.type);
 
     // 构建组件属性
     const props: any = { ...component.props };
+    
+    // 合并 extraProps 到 props 中
+    if (component.extraProps) {
+      Object.assign(props, component.extraProps);
+    }
 
     // 添加尺寸样式，让组件撑满容器
     const sizeStyle: React.CSSProperties = {};

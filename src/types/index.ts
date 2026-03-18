@@ -1,3 +1,12 @@
 export * from './component';
-export * from './canvas';
+export type { 
+  CanvasState, 
+  CanvasStyle, 
+  GuideLine, 
+  AlignmentLine, 
+  SelectionBox, 
+  ClipboardData, 
+  PreviewDevice, 
+  DeviceConfig 
+} from './canvas';
 export * from './history';

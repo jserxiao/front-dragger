@@ -22,7 +22,6 @@ import {
   MenuFoldOutlined,
   InfoCircleOutlined,
   RocketOutlined,
-  StarOutlined,
 } from '@ant-design/icons';
 
 /**

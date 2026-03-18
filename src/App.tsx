@@ -37,7 +37,7 @@ const App: React.FC = () => {
   } = useEditorStore();
 
   // 当前拖拽的组件配置
-  const [activeConfig, setActiveConfig] = useState<ReturnType<typeof ComponentRegistry.getComponent>>(null);
+  const [activeConfig, setActiveConfig] = useState<ReturnType<typeof ComponentRegistry.getComponent> | undefined>(undefined);
   const [activeComponent, setActiveComponent] = useState<typeof components[0] | null>(null);
   
   // 鼠标实时位置（屏幕坐标）
@@ -142,7 +142,7 @@ const App: React.FC = () => {
         };
         const component = findComponent(components, activeData.componentId);
         setActiveComponent(component);
-        setActiveConfig(null);
+        setActiveConfig(undefined);
         
         // 设置拖拽预览
         // 移动已有组件时，计算鼠标相对于组件左上角的偏移
@@ -324,7 +324,7 @@ const App: React.FC = () => {
 
       setDragging(false);
       setDragOverCanvas(false);
-      setActiveConfig(null);
+      setActiveConfig(undefined);
       setActiveComponent(null);
       setDragPreview({ position: null, size: null, draggingId: null });
       setMousePosition(null);
@@ -401,13 +401,15 @@ const App: React.FC = () => {
             id: uuidv4(),
             type: config.type,
             name: config.name,
-            props: { ...config.defaultProps },
+            props: {}, // props 保持空，所有属性放入 extraProps
             style: { ...config.defaultStyle },
             children: [],
             position: { x, y },
             size: { ...config.defaultSize },
             // 关联的目标组件 ID
             triggerComponentId: targetComponent.id,
+            // 所有属性（包括 defaultProps 和 className）放入 extraProps
+            extraProps: { ...config.defaultProps, className: config.type.toLowerCase() },
           };
 
           addComponent(newComponent);
@@ -418,11 +420,13 @@ const App: React.FC = () => {
           id: uuidv4(),
           type: config.type,
           name: config.name,
-          props: { ...config.defaultProps },
+          props: {}, // props 保持空，所有属性放入 extraProps
           style: { ...config.defaultStyle },
           children: [],
           position: { x, y },
           size: { ...config.defaultSize },
+          // 所有属性（包括 defaultProps 和 className）放入 extraProps
+          extraProps: { ...config.defaultProps, className: config.type.toLowerCase() },
         };
 
         addComponent(newComponent);
@@ -461,6 +465,15 @@ const App: React.FC = () => {
             // 转换为画布坐标
             let newX = Math.max(0, (compScreenX - canvasRect.left - canvas.offset.x) / canvas.scale);
             let newY = Math.max(0, (compScreenY - canvasRect.top - canvas.offset.y) / canvas.scale);
+
+            // 如果组件有父级，需要计算相对于父级的位置
+            if (component.parentId) {
+              const parentComponent = findComponent(components, component.parentId);
+              if (parentComponent) {
+                newX = newX - parentComponent.position.x;
+                newY = newY - parentComponent.position.y;
+              }
+            }
 
             // 应用对齐吸附偏移
             if (alignmentSnap.offsetX !== null) {

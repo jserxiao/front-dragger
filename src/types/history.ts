@@ -4,6 +4,7 @@ import { ComponentNode } from './component';
  * 操作类型
  */
 export type ActionType =
+  | 'init'
   | 'add'
   | 'delete'
   | 'update'

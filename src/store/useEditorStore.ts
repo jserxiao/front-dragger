@@ -33,7 +33,8 @@ const loadFromStorage = (): PersistedState | null => {
   return null;
 };
 
-// 保存状态到本地存储
+// 保存状态到本地存储（保留供未来使用）
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 const saveToStorage = (state: PersistedState) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
@@ -98,6 +99,11 @@ interface EditorActions {
   resizeComponent: (id: string, size: { width: number | string; height: number | string }) => void;
   duplicateComponents: (ids: string[]) => void;
   replaceComponents: (components: ComponentNode[]) => void;
+  // 父子级关系操作
+  setParentComponent: (componentId: string, parentId: string | null, relativePosition?: { x: number; y: number }) => void;
+  addChildComponent: (parentId: string, component: ComponentNode) => void;
+  getComponentById: (id: string) => ComponentNode | null;
+  getAllComponents: () => ComponentNode[];
 
   // 选择操作
   selectComponent: (id: string, multi?: boolean) => void;
@@ -267,7 +273,12 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         const findAndMove = (components: ComponentNode[]): boolean => {
           for (let i = 0; i < components.length; i++) {
             if (components[i].id === id) {
-              components[i].position = position;
+              // 如果有父级，更新相对位置
+              if (components[i].parentId) {
+                components[i].relativePosition = position;
+              } else {
+                components[i].position = position;
+              }
               return true;
             }
             if (components[i].children && findAndMove(components[i].children)) {
@@ -298,6 +309,198 @@ export const useEditorStore = create<EditorState & EditorActions>()(
         findAndResize(state.components);
       });
       get().saveHistory('resize', `调整组件大小`);
+    },
+
+    // 设置组件的父级
+    setParentComponent: (componentId, parentId, relativePosition) => {
+      set((state) => {
+        // 找到要设置父级的组件
+        let targetComponent: ComponentNode | null = null;
+        
+        const findComponent = (components: ComponentNode[]): boolean => {
+          for (let i = 0; i < components.length; i++) {
+            if (components[i].id === componentId) {
+              targetComponent = components[i];
+              return true;
+            }
+            if (components[i].children && findComponent(components[i].children)) {
+              return true;
+            }
+          }
+          return false;
+        };
+        
+        findComponent(state.components);
+        
+        if (!targetComponent) return;
+        
+        // 不能将自己设置为自己的子级
+        if (componentId === parentId) return;
+        
+        // 如果 parentId 为 null，解除父级关系
+        if (!parentId) {
+          // 从当前父级的 children 中移除
+          const removeFromParent = (components: ComponentNode[]): boolean => {
+            for (let i = 0; i < components.length; i++) {
+              if (components[i].children) {
+                const childIndex = components[i].children!.findIndex(c => c.id === componentId);
+                if (childIndex !== -1) {
+                  const [removed] = components[i].children!.splice(childIndex, 1);
+                  // 将组件添加到根级别
+                  removed.parentId = undefined;
+                  // 计算在画布上的绝对位置
+                  removed.position = {
+                    x: (removed.relativePosition?.x || 0) + (components[i].position.x || 0),
+                    y: (removed.relativePosition?.y || 0) + (components[i].position.y || 0),
+                  };
+                  removed.relativePosition = undefined;
+                  state.components.push(removed);
+                  return true;
+                }
+                if (removeFromParent(components[i].children!)) {
+                  return true;
+                }
+              }
+            }
+            return false;
+          };
+          
+          removeFromParent(state.components);
+          return;
+        }
+        
+        // 找到新的父级组件
+        let newParent: ComponentNode | null = null;
+        const findParent = (components: ComponentNode[]): boolean => {
+          for (const comp of components) {
+            if (comp.id === parentId) {
+              newParent = comp;
+              return true;
+            }
+            if (comp.children && findParent(comp.children)) {
+              return true;
+            }
+          }
+          return false;
+        };
+        
+        findParent(state.components);
+        
+        if (!newParent) return;
+        
+        // 检查是否会形成循环引用（目标组件不能是新父级的祖先）
+        const isAncestorOf = (ancestorId: string, descendantId: string): boolean => {
+          const ancestor = state.components.find(c => c.id === ancestorId) || 
+            state.components.flatMap(c => c.children || []).find(c => c.id === ancestorId);
+          if (!ancestor) return false;
+          
+          const checkChildren = (children: ComponentNode[]): boolean => {
+            for (const child of children) {
+              if (child.id === descendantId) return true;
+              if (child.children && checkChildren(child.children)) return true;
+            }
+            return false;
+          };
+          
+          return checkChildren(ancestor.children || []);
+        };
+        
+        if (isAncestorOf(componentId, parentId)) return;
+        
+        // 从当前位置移除组件
+        const removeComponent = (components: ComponentNode[]): ComponentNode | null => {
+          for (let i = 0; i < components.length; i++) {
+            if (components[i].id === componentId) {
+              const [removed] = components.splice(i, 1);
+              return removed;
+            }
+            if (components[i].children) {
+              const removed = removeComponent(components[i].children);
+              if (removed) return removed;
+            }
+          }
+          return null;
+        };
+        
+        const removed = removeComponent(state.components);
+        if (!removed || !newParent) return;
+        
+        // 设置父级关系
+        removed.parentId = parentId;
+        removed.relativePosition = relativePosition || { x: 0, y: 0 };
+        
+        // 添加到新父级的 children
+        const parentComponent = newParent as ComponentNode;
+        if (!parentComponent.children) {
+          parentComponent.children = [];
+        }
+        parentComponent.children.push(removed);
+      });
+      get().saveHistory('update', '设置组件父级');
+    },
+
+    // 为组件添加子级
+    addChildComponent: (parentId, component) => {
+      const newComponent: ComponentNode = {
+        ...component,
+        id: component.id || uuidv4(),
+        parentId,
+        relativePosition: component.relativePosition || { x: 0, y: 0 },
+      };
+      
+      set((state) => {
+        const findAndAdd = (components: ComponentNode[]): boolean => {
+          for (const comp of components) {
+            if (comp.id === parentId) {
+              if (!comp.children) {
+                comp.children = [];
+              }
+              comp.children.push(newComponent);
+              return true;
+            }
+            if (comp.children && findAndAdd(comp.children)) {
+              return true;
+            }
+          }
+          return false;
+        };
+        
+        findAndAdd(state.components);
+        state.canvas.selectedIds = [newComponent.id];
+      });
+      get().saveHistory('add', `添加子组件: ${newComponent.name}`);
+    },
+
+    // 根据 ID 获取组件
+    getComponentById: (id) => {
+      const state = get();
+      const findComponent = (components: ComponentNode[]): ComponentNode | null => {
+        for (const comp of components) {
+          if (comp.id === id) return comp;
+          if (comp.children) {
+            const found = findComponent(comp.children);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      return findComponent(state.components);
+    },
+
+    // 获取所有组件（扁平化列表）
+    getAllComponents: () => {
+      const state = get();
+      const allComponents: ComponentNode[] = [];
+      const flatten = (components: ComponentNode[]) => {
+        for (const comp of components) {
+          allComponents.push(comp);
+          if (comp.children) {
+            flatten(comp.children);
+          }
+        }
+      };
+      flatten(state.components);
+      return allComponents;
     },
 
     duplicateComponents: (ids) => {

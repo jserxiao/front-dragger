@@ -288,3 +288,132 @@
   align-items: center;
   gap: 8px;
 }
+
+/* 父子级关系样式 */
+.parentName {
+  font-weight: 500;
+  color: #d48806;
+}
+
+.parentId {
+  font-size: 11px;
+  color: #999;
+  font-family: monospace;
+}
+
+.noParent {
+  color: #999;
+  font-size: 12px;
+}
+
+.childrenList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.childItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  background: #fafafa;
+  border-radius: 4px;
+}
+
+.childName {
+  font-size: 12px;
+  color: #333;
+}
+
+.childId {
+  font-size: 10px;
+  color: #999;
+  font-family: monospace;
+}
+
+.noChildren {
+  color: #999;
+  font-size: 12px;
+  font-style: italic;
+}
+
+/* 选择父级弹框样式 */
+.parentSelectList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.parentSelectItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.parentSelectItem:hover {
+  border-color: #fa8c16;
+  background: #fffbe6;
+}
+
+.parentSelectName {
+  font-weight: 500;
+  color: #333;
+}
+
+.parentSelectType {
+  font-size: 11px;
+  color: #999;
+  background: #f5f5f5;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+/* 组件列表项信息 */
+.componentListItemInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.componentListItemId {
+  font-size: 10px;
+  color: #999;
+  font-family: monospace;
+}
+
+.componentListItemParentId {
+  font-size: 10px;
+  color: #fa8c16;
+  font-family: monospace;
+}
+
+/* 相对坐标设置区域 */
+.relativePosSection {
+  display: flex;
+  gap: 16px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 6px;
+  margin-bottom: 12px;
+}
+
+.relativePosItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.relativePosItem label {
+  font-size: 13px;
+  color: #666;
+  white-space: nowrap;
+}
