@@ -81,6 +81,12 @@ interface EditorState {
     size: { width: number; height: number } | null;
     draggingId: string | null;
   };
+
+  // 对齐吸附偏移（用于拖拽结束时吸附）
+  alignmentSnap: {
+    offsetX: number | null;
+    offsetY: number | null;
+  };
 }
 
 interface EditorActions {
@@ -128,6 +134,7 @@ interface EditorActions {
   setDragging: (isDragging: boolean) => void;
   setDragOverCanvas: (over: boolean) => void;
   setDragPreview: (preview: EditorState['dragPreview']) => void;
+  setAlignmentSnap: (snap: EditorState['alignmentSnap']) => void;
 
   // 清空画布
   clearCanvas: () => void;
@@ -171,6 +178,10 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       position: null,
       size: null,
       draggingId: null,
+    },
+    alignmentSnap: {
+      offsetX: null,
+      offsetY: null,
     },
 
     // 组件操作
@@ -566,6 +577,12 @@ export const useEditorStore = create<EditorState & EditorActions>()(
       });
     },
 
+    setAlignmentSnap: (snap) => {
+      set((state) => {
+        state.alignmentSnap = snap;
+      });
+    },
+
     // 清空画布
     clearCanvas: () => {
       set((state) => {
@@ -592,20 +609,3 @@ export const useEditorStore = create<EditorState & EditorActions>()(
   }))
 );
 
-// 订阅状态变化，自动保存到本地存储（防抖处理）
-let saveTimeout: ReturnType<typeof setTimeout> | null = null;
-
-useEditorStore.subscribe((state) => {
-  // 清除之前的定时器
-  if (saveTimeout) {
-    clearTimeout(saveTimeout);
-  }
-  
-  // 延迟保存，避免频繁写入
-  saveTimeout = setTimeout(() => {
-    saveToStorage({
-      components: state.components,
-      canvasStyle: state.canvas.canvasStyle,
-    });
-  }, 500);
-});

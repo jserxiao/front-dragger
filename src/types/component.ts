@@ -13,6 +13,10 @@ export interface ComponentNode {
   position: Position;
   size: Size;
   parentId?: string;
+  // Drawer/Modal 关联的触发组件 ID
+  triggerComponentId?: string;
+  // 用户自定义属性（通过 JSON 输入）
+  extraProps?: Record<string, any>;
 }
 
 /**
@@ -72,6 +76,10 @@ export interface ComponentConfig {
   propSchema: PropSchema[];
   allowChildren: boolean;
   defaultSize: Size;
+  // 是否需要释放在其他组件上（如 Drawer、Modal）
+  requiresOverlap?: boolean;
+  // 拖拽时的预览尺寸（用于需要特殊预览的组件如 Drawer、Modal）
+  dragPreviewSize?: Size;
 }
 
 /**

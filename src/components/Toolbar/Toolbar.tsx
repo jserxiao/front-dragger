@@ -59,9 +59,14 @@ const Toolbar: React.FC = () => {
 
   // 直接订阅历史状态，而不是通过函数
   const historyIndex = useEditorStore((state) => state.historyIndex);
-  const historyLength = useEditorStore((state) => state.history.length);
 
   const { selectedIds, scale, showGrid, snapToGrid, gridSize } = canvas;
+  
+  // 计算撤销/重做是否可用
+  // 撤销：有历史记录可以撤销
+  // 重做：画布上有组件时就不禁用
+  const undoDisabled = historyIndex <= 0;
+  const redoDisabled = components.length === 0;
 
   // 导入 JSON 的 Modal
   const [importModalVisible, setImportModalVisible] = useState(false);
@@ -79,10 +84,8 @@ const Toolbar: React.FC = () => {
 
   // 重做
   const handleRedo = useCallback(() => {
-    if (historyIndex < historyLength - 1) {
       redo();
-    }
-  }, [historyIndex, historyLength, redo]);
+  }, [historyIndex, redo]);
 
   // 删除选中
   const handleDelete = useCallback(() => {
@@ -339,7 +342,6 @@ const Toolbar: React.FC = () => {
               type="text"
               icon={<RedoOutlined />}
               onClick={handleRedo}
-              disabled={historyIndex >= historyLength - 1}
             />
           </Tooltip>
 

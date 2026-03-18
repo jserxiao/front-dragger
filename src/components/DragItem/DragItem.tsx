@@ -162,9 +162,24 @@ const getSizeStyle = (size: { width: number | string; height: number | string })
  */
 const DragItem: React.FC<DragItemProps> = ({ config, component }) => {
   if (config) {
-    // 新建组件的预览 - 使用配置的默认尺寸
+    // 新建组件的预览
     const Component = ComponentMap[config.type];
-    const sizeStyle = getSizeStyle(config.defaultSize);
+    
+    // Drawer 和 Modal 使用特殊的拖拽预览尺寸和样式
+    const isOverlapComponent = config.requiresOverlap;
+    const size = isOverlapComponent && config.dragPreviewSize 
+      ? config.dragPreviewSize 
+      : config.defaultSize;
+    const sizeStyle = getSizeStyle(size);
+
+    // Drawer 和 Modal 显示虚线透明框
+    if (isOverlapComponent) {
+      return (
+        <div className={styles.previewDashed} style={sizeStyle}>
+          <span className={styles.previewName}>{config.name}</span>
+        </div>
+      );
+    }
 
     if (!Component) {
       return (

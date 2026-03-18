@@ -237,6 +237,7 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
     setScale,
     setOffset,
     selectComponent,
+    setAlignmentSnap,
     clearSelection,
     setHoveredId,
     addComponent,
@@ -334,6 +335,10 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
       const lines: AlignmentLine[] = [];
       const threshold = 5; // 对齐阈值
 
+      // 吸附偏移
+      let offsetX: number | null = null;
+      let offsetY: number | null = null;
+
       // 获取画布内容区域
       const contentEl = contentRef.current;
       if (!contentEl) return;
@@ -368,6 +373,7 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
         const dragWidth = typeof size.width === 'number' ? size.width : 100;
         const dragHeight = typeof size.height === 'number' ? size.height : 40;
 
+        // position 是 DragOverlay 左上角，组件中心是 position + size/2
         const dragLeft = position.x;
         const dragRight = position.x + dragWidth;
         const dragTop = position.y;
@@ -377,80 +383,113 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
 
         // 左对齐
         if (Math.abs(dragLeft - compLeft) < threshold) {
+          const diff = dragLeft - compLeft;
           lines.push({
             type: 'vertical',
             position: compLeft,
             start: Math.min(dragTop, compTop),
             end: Math.max(dragBottom, compBottom),
-            difference: dragLeft - compLeft,
+            difference: diff,
           });
+          // 吸附到左边
+          if (offsetX === null || Math.abs(diff) < Math.abs(offsetX)) {
+            offsetX = -diff;
+          }
         }
 
         // 右对齐
         if (Math.abs(dragRight - compRight) < threshold) {
+          const diff = dragRight - compRight;
           lines.push({
             type: 'vertical',
             position: compRight,
             start: Math.min(dragTop, compTop),
             end: Math.max(dragBottom, compBottom),
-            difference: dragRight - compRight,
+            difference: diff,
           });
+          // 吸附到右边
+          if (offsetX === null || Math.abs(diff) < Math.abs(offsetX)) {
+            offsetX = -diff;
+          }
         }
 
         // 顶部对齐
         if (Math.abs(dragTop - compTop) < threshold) {
+          const diff = dragTop - compTop;
           lines.push({
             type: 'horizontal',
             position: compTop,
             start: Math.min(dragLeft, compLeft),
             end: Math.max(dragRight, compRight),
-            difference: dragTop - compTop,
+            difference: diff,
           });
+          // 吸附到顶部
+          if (offsetY === null || Math.abs(diff) < Math.abs(offsetY)) {
+            offsetY = -diff;
+          }
         }
 
         // 底部对齐
         if (Math.abs(dragBottom - compBottom) < threshold) {
+          const diff = dragBottom - compBottom;
           lines.push({
             type: 'horizontal',
             position: compBottom,
             start: Math.min(dragLeft, compLeft),
             end: Math.max(dragRight, compRight),
-            difference: dragBottom - compBottom,
+            difference: diff,
           });
+          // 吸附到底部
+          if (offsetY === null || Math.abs(diff) < Math.abs(offsetY)) {
+            offsetY = -diff;
+          }
         }
 
         // 水平居中对齐
         if (Math.abs(dragCenterX - compCenterX) < threshold) {
+          const diff = dragCenterX - compCenterX;
           lines.push({
             type: 'vertical',
             position: compCenterX,
             start: Math.min(dragTop, compTop),
             end: Math.max(dragBottom, compBottom),
-            difference: dragCenterX - compCenterX,
+            difference: diff,
           });
+          // 吸附到居中
+          if (offsetX === null || Math.abs(diff) < Math.abs(offsetX)) {
+            offsetX = -diff;
+          }
         }
 
         // 垂直居中对齐
         if (Math.abs(dragCenterY - compCenterY) < threshold) {
+          const diff = dragCenterY - compCenterY;
           lines.push({
             type: 'horizontal',
             position: compCenterY,
             start: Math.min(dragLeft, compLeft),
             end: Math.max(dragRight, compRight),
-            difference: dragCenterY - compCenterY,
+            difference: diff,
           });
+          // 吸附到居中
+          if (offsetY === null || Math.abs(diff) < Math.abs(offsetY)) {
+            offsetY = -diff;
+          }
         }
       });
 
       setAlignmentLines(lines);
+      // 更新吸附偏移到 store
+      setAlignmentSnap({ offsetX, offsetY });
     },
-    [components, scale]
+    [components, scale, setAlignmentSnap]
   );
 
   // 清除对齐线
   const clearAlignmentLines = useCallback(() => {
     setAlignmentLines([]);
-  }, []);
+    setAlignmentSnap({ offsetX: null, offsetY: null });
+  }, [setAlignmentSnap]);
 
   // 监听拖拽预览变化，实时计算对齐线
   useEffect(() => {

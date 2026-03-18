@@ -12,7 +12,7 @@ import {
   Upload,
 } from 'antd';
 import type { Color } from 'antd/es/color-picker';
-import { DeleteOutlined, SettingOutlined, PictureOutlined, UploadOutlined, AppstoreOutlined, EyeOutlined, EyeInvisibleOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SettingOutlined, PictureOutlined, UploadOutlined, AppstoreOutlined } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
 import { ComponentRegistry } from '@/core';
 import { PropSchema, CanvasStyle } from '@/types';
@@ -25,6 +25,10 @@ const PropertyPanel: React.FC = () => {
   const { components, canvas, updateComponent, deleteComponents, setCanvasStyle, selectComponent, clearSelection } =
     useEditorStore();
   const { selectedIds, canvasStyle } = canvas;
+
+  // JSON 输入框的本地状态
+  const [jsonInputValue, setJsonInputValue] = useState<string>('');
+  const [jsonError, setJsonError] = useState<string>('');
 
   // 获取选中的组件
   const selectedComponent = useMemo(() => {
@@ -64,6 +68,16 @@ const PropertyPanel: React.FC = () => {
       },
     });
   };
+
+  // 同步 extraProps 到本地 JSON 输入状态
+  useEffect(() => {
+    if (selectedComponent?.extraProps) {
+      setJsonInputValue(JSON.stringify(selectedComponent.extraProps, null, 2));
+    } else {
+      setJsonInputValue('');
+    }
+    setJsonError('');
+  }, [selectedComponent?.id, selectedComponent?.extraProps]);
 
   // 处理样式变更
   const handleStyleChange = (styleProp: string, value: unknown) => {
@@ -468,8 +482,55 @@ const PropertyPanel: React.FC = () => {
       });
     });
 
+    // 自定义属性面板（放在最后）
+    items.push({
+      key: 'extraProps',
+      label: '自定义属性',
+      children: (
+        <div className={styles.propGroup}>
+          <div className={styles.propItem} style={{ flexDirection: 'column' }}>
+            <label className={styles.label}>JSON 属性</label>
+            <Input.TextArea
+              value={jsonInputValue}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
+                const value = e.target.value;
+                setJsonInputValue(value);
+                
+                const trimmedValue = value.trim();
+                if (!trimmedValue) {
+                  // 清空时删除 extraProps
+                  setJsonError('');
+                  if (selectedComponent) {
+                    updateComponent(selectedComponent.id, { extraProps: undefined });
+                  }
+                  return;
+                }
+                
+                try {
+                  const parsed = JSON.parse(trimmedValue);
+                  setJsonError('');
+                  if (selectedComponent) {
+                    updateComponent(selectedComponent.id, { extraProps: parsed });
+                  }
+                } catch {
+                  // JSON 格式错误时只显示错误提示，不清空输入框，也不更新 extraProps
+                  setJsonError('JSON 格式错误');
+                }
+              }}
+              placeholder='{"data-testid": "my-button", "aria-label": "提交"}'
+              autoSize={{ minRows: 3, maxRows: 10 }}
+              style={{ fontFamily: 'monospace', fontSize: 12 }}
+              status={jsonError ? 'error' : undefined}
+            />
+            {jsonError && <span className={styles.error}>{jsonError}</span>}
+            <span className={styles.hint}>输入 JSON 格式的额外属性，将直接映射到组件上</span>
+          </div>
+        </div>
+      ),
+    });
+
     return items;
-  }, [selectedComponent, groupedProps]);
+  }, [selectedComponent, groupedProps, jsonInputValue, jsonError]);
 
   // Tab 状态管理
   const [activeTab, setActiveTab] = useState<string>(selectedComponent ? 'component' : 'canvas');
@@ -604,7 +665,7 @@ const PropertyPanel: React.FC = () => {
                           size="small"
                           icon={<DeleteOutlined />}
                           className={styles.deleteBtn}
-                          onClick={(e) => handleComponentItemDelete(comp.id, e)}
+                          onClick={(e: React.MouseEvent) => handleComponentItemDelete(comp.id, e)}
                         />
                       </div>
                     </div>

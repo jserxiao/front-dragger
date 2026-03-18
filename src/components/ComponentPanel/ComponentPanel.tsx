@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { Input, Collapse, Empty } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useDraggable } from '@dnd-kit/core';
-import { CSS } from '@dnd-kit/utilities';
 import { ComponentRegistry } from '@/core';
 import { ComponentConfig, ComponentCategory } from '@/types';
 import styles from './ComponentPanel.module.css';
@@ -17,7 +16,7 @@ interface DraggableComponentItemProps {
 const DraggableComponentItem: React.FC<DraggableComponentItemProps> = ({
   config,
 }) => {
-  const { attributes, listeners, setNodeRef, transform, isDragging } =
+  const { attributes, listeners, setNodeRef, isDragging } =
     useDraggable({
       id: `new-${config.type}`,
       data: {
@@ -26,8 +25,8 @@ const DraggableComponentItem: React.FC<DraggableComponentItemProps> = ({
       },
     });
 
+  // 拖拽时不应用 transform，只改变透明度
   const style = {
-    transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.5 : 1,
   };
 

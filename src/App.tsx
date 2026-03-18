@@ -8,11 +8,9 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragOverlay,
-  Modifier,
 } from '@dnd-kit/core';
 import { v4 as uuidv4 } from 'uuid';
-import { ConfigProvider } from 'antd';
+import { ConfigProvider, message } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
 import { useEditorStore } from '@/store';
 import { ComponentRegistry } from '@/core';
@@ -25,12 +23,24 @@ import { DragItem } from '@/components/DragItem';
 import styles from './App.module.css';
 
 const App: React.FC = () => {
-  const { addComponent, setDragging, setDragOverCanvas, canvas, components, setDragPreview } =
-    useEditorStore();
+  const { 
+    addComponent, 
+    setDragging, 
+    setDragOverCanvas, 
+    canvas, 
+    components, 
+    setDragPreview, 
+    dragPreview,
+    alignmentSnap,
+    moveComponent,
+  } = useEditorStore();
 
   // 当前拖拽的组件配置
   const [activeConfig, setActiveConfig] = useState<ReturnType<typeof ComponentRegistry.getComponent>>(null);
   const [activeComponent, setActiveComponent] = useState<typeof components[0] | null>(null);
+  
+  // 鼠标实时位置（屏幕坐标）
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
   
   // 拖拽起始位置
   const dragStartPos = useRef({ x: 0, y: 0 });
@@ -43,22 +53,6 @@ const App: React.FC = () => {
         distance: 1,
       },
     })
-  );
-
-  // 自定义 modifier：让拖拽元素左上角对齐鼠标
-  const topLeftModifier: Modifier = useCallback(
-    ({ transform, draggingNodeRect, transform: { x, y } }) => {
-      if (!draggingNodeRect) {
-        return transform;
-      }
-      // 将默认的中心对齐改为左上角对齐
-      return {
-        ...transform,
-        x: x + draggingNodeRect.width / 2,
-        y: y + draggingNodeRect.height / 2,
-      };
-    },
-    []
   );
 
   // 计算拖拽位置相对于画布的坐标
@@ -89,7 +83,11 @@ const App: React.FC = () => {
     (event: DragStartEvent) => {
       setDragging(true);
       const activeData = event.active.data.current;
-      activatorEventRef.current = event.activatorEvent as PointerEvent;
+      const startEvent = event.activatorEvent as PointerEvent;
+      activatorEventRef.current = startEvent;
+      
+      // 初始化鼠标位置
+      setMousePosition({ x: startEvent.clientX, y: startEvent.clientY });
 
       // 新建组件拖拽
       if (activeData?.type === 'new') {
@@ -98,8 +96,29 @@ const App: React.FC = () => {
         setActiveComponent(null);
         
         // 初始化拖拽预览
-        const startEvent = event.activatorEvent as PointerEvent;
         dragStartPos.current = { x: startEvent.clientX, y: startEvent.clientY };
+        
+        // 设置预览尺寸（位置会在 handleDragMove 中更新）
+        if (config) {
+          // Drawer/Modal 使用 dragPreviewSize，其他组件使用 defaultSize
+          const previewSize = config.requiresOverlap && config.dragPreviewSize 
+            ? config.dragPreviewSize 
+            : config.defaultSize;
+          const width = typeof previewSize.width === 'number' ? previewSize.width : 100;
+          const height = typeof previewSize.height === 'number' ? previewSize.height : 40;
+          
+          // 尝试计算画布坐标，如果鼠标在画布上则设置位置
+          const canvasPos = calculateCanvasPosition(startEvent.clientX, startEvent.clientY);
+          
+          setDragPreview({
+            position: canvasPos ? {
+              x: canvasPos.x - width / 2,
+              y: canvasPos.y - height / 2,
+            } : null,
+            size: { width, height },
+            draggingId: 'new',
+          });
+        }
       }
 
       // 移动已有组件
@@ -122,67 +141,110 @@ const App: React.FC = () => {
         setActiveConfig(null);
         
         // 设置拖拽预览
+        // 移动已有组件时，预览位置就是组件原本的位置（左上角）
+        // 注意：移动已有组件不需要 modifier 偏移，因为用户点击位置就是相对于组件的
         if (component) {
+          const width = typeof component.size.width === 'number' ? component.size.width : 100;
+          const height = typeof component.size.height === 'number' ? component.size.height : 40;
           setDragPreview({
-            position: { ...component.position },
+            position: { 
+              x: component.position.x,
+              y: component.position.y,
+            },
             size: {
-              width: typeof component.size.width === 'number' ? component.size.width : 100,
-              height: typeof component.size.height === 'number' ? component.size.height : 40,
+              width,
+              height,
             },
             draggingId: component.id,
           });
         }
       }
     },
-    [setDragging, components, setDragPreview]
+    [setDragging, components, setDragPreview, calculateCanvasPosition]
   );
 
   // 拖拽移动中 - 实时更新预览位置
+  // 注意：dnd-kit 的 DragMoveEvent 不提供实时鼠标位置
+  // 我们通过 pointermove 事件监听器来更新 mousePosition
+  // handleDragMove 已不需要，保留空函数以避免警告
   const handleDragMove = useCallback(
-    (event: DragMoveEvent) => {
-      const { delta } = event;
-      const startEvent = activatorEventRef.current;
-      if (!startEvent) return;
-
-      // 计算当前鼠标位置
-      const currentX = startEvent.clientX + delta.x;
-      const currentY = startEvent.clientY + delta.y;
-
+    (_event: DragMoveEvent) => {
+      // 注意：dnd-kit 的 DragMoveEvent 不提供实时鼠标位置
+      // 我们通过 pointermove 事件监听器来更新 mousePosition
+      // 这里只处理画布坐标的更新
+      
+      if (!mousePosition) return;
+      
       // 计算画布坐标
-      const position = calculateCanvasPosition(currentX, currentY);
+      const position = calculateCanvasPosition(mousePosition.x, mousePosition.y);
 
       if (activeConfig) {
         // 新建组件
+        // Drawer/Modal 使用 dragPreviewSize，其他组件使用 defaultSize
+        const previewSize = activeConfig.requiresOverlap && activeConfig.dragPreviewSize 
+          ? activeConfig.dragPreviewSize 
+          : activeConfig.defaultSize;
         const size = {
-          width: typeof activeConfig.defaultSize.width === 'number' ? activeConfig.defaultSize.width : 100,
-          height: typeof activeConfig.defaultSize.height === 'number' ? activeConfig.defaultSize.height : 40,
+          width: typeof previewSize.width === 'number' ? previewSize.width : 100,
+          height: typeof previewSize.height === 'number' ? previewSize.height : 40,
         };
         
         if (position) {
-          // 左上角对齐鼠标，不需要减去一半尺寸
+          // 新建组件：鼠标位置就是组件中心
           setDragPreview({
-            position,
+            position: {
+              x: position.x - size.width / 2,
+              y: position.y - size.height / 2,
+            },
             size,
             draggingId: 'new',
           });
         }
       } else if (activeComponent) {
-        // 移动已有组件
-        const newX = Math.max(0, activeComponent.position.x + delta.x / canvas.scale);
-        const newY = Math.max(0, activeComponent.position.y + delta.y / canvas.scale);
-        
-        setDragPreview({
-          position: { x: newX, y: newY },
-          size: {
-            width: typeof activeComponent.size.width === 'number' ? activeComponent.size.width : 100,
-            height: typeof activeComponent.size.height === 'number' ? activeComponent.size.height : 40,
-          },
-          draggingId: activeComponent.id,
-        });
+        // 移动已有组件 - 使用鼠标实时位置计算
+        const startEvent = activatorEventRef.current;
+        if (startEvent) {
+          const deltaX = mousePosition.x - startEvent.clientX;
+          const deltaY = mousePosition.y - startEvent.clientY;
+          
+          const newX = Math.max(0, activeComponent.position.x + deltaX / canvas.scale);
+          const newY = Math.max(0, activeComponent.position.y + deltaY / canvas.scale);
+          const width = typeof activeComponent.size.width === 'number' ? activeComponent.size.width : 100;
+          const height = typeof activeComponent.size.height === 'number' ? activeComponent.size.height : 40;
+          
+          setDragPreview({
+            position: { 
+              x: newX,
+              y: newY,
+            },
+            size: {
+              width,
+              height,
+            },
+            draggingId: activeComponent.id,
+          });
+        }
       }
     },
-    [activeConfig, activeComponent, calculateCanvasPosition, canvas.scale, setDragPreview]
+    [activeConfig, activeComponent, calculateCanvasPosition, canvas.scale, setDragPreview, mousePosition]
   );
+
+  // 监听鼠标移动事件，实时更新鼠标位置
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (activeConfig || activeComponent) {
+        setMousePosition({ x: e.clientX, y: e.clientY });
+      }
+    };
+
+    if (activeConfig || activeComponent) {
+      window.addEventListener('pointermove', handlePointerMove);
+    }
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+    };
+  }, [activeConfig, activeComponent]);
 
   // 拖拽经过
   const handleDragOver = useCallback(
@@ -193,16 +255,55 @@ const App: React.FC = () => {
     [setDragOverCanvas]
   );
 
+  // 查找鼠标位置下方的组件
+  const findComponentAtPosition = useCallback((
+    x: number,
+    y: number,
+    comps: typeof components,
+    excludeId?: string
+  ): typeof components[0] | null => {
+    // 从后往前遍历，找到最上层的组件
+    for (let i = comps.length - 1; i >= 0; i--) {
+      const comp = comps[i];
+      if (comp.id === excludeId) continue;
+      
+      const compWidth = typeof comp.size.width === 'number' ? comp.size.width : 100;
+      const compHeight = typeof comp.size.height === 'number' ? comp.size.height : 40;
+      
+      // 检查点是否在组件范围内
+      if (
+        x >= comp.position.x &&
+        x <= comp.position.x + compWidth &&
+        y >= comp.position.y &&
+        y <= comp.position.y + compHeight
+      ) {
+        return comp;
+      }
+      
+      // 检查子组件
+      if (comp.children && comp.children.length > 0) {
+        const found = findComponentAtPosition(x, y, comp.children, excludeId);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, [components]);
+
   // 拖拽结束
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
-      const { active, over, activatorEvent, delta } = event;
+      const { active, over } = event;
+      const startEvent = activatorEventRef.current;
+
+      // 保存当前鼠标位置用于计算
+      const currentMousePos = mousePosition;
 
       setDragging(false);
       setDragOverCanvas(false);
       setActiveConfig(null);
       setActiveComponent(null);
       setDragPreview({ position: null, size: null, draggingId: null });
+      setMousePosition(null);
       activatorEventRef.current = null;
 
       const activeData = active.data.current;
@@ -221,10 +322,10 @@ const App: React.FC = () => {
         // 获取画布的位置信息
         const canvasRect = canvasEl.getBoundingClientRect();
 
-        // 计算拖拽结束时的鼠标位置 (起始位置 + delta)
-        const startEvent = activatorEvent as PointerEvent;
-        const endX = startEvent.clientX + delta.x;
-        const endY = startEvent.clientY + delta.y;
+        // 使用保存的鼠标实时位置
+        if (!currentMousePos) return;
+        const endX = currentMousePos.x;
+        const endY = currentMousePos.y;
 
         // 检查结束位置是否在画布范围内
         const isOverCanvas =
@@ -236,13 +337,56 @@ const App: React.FC = () => {
         if (!isOverCanvas && !over) return;
 
         // 计算相对于画布的位置
-        // 左上角对齐鼠标，不需要减去一半尺寸
-        let x = (endX - canvasRect.left - canvas.offset.x) / canvas.scale;
-        let y = (endY - canvasRect.top - canvas.offset.y) / canvas.scale;
+        // 鼠标在组件中间，需要计算组件左上角位置
+        const size = config.defaultSize;
+        const compWidth = typeof size.width === 'number' ? size.width : 100;
+        const compHeight = typeof size.height === 'number' ? size.height : 40;
+        
+        let x = (endX - canvasRect.left - canvas.offset.x) / canvas.scale - compWidth / 2;
+        let y = (endY - canvasRect.top - canvas.offset.y) / canvas.scale - compHeight / 2;
+
+        // 应用对齐吸附偏移
+        if (alignmentSnap.offsetX !== null) {
+          x += alignmentSnap.offsetX;
+        }
+        if (alignmentSnap.offsetY !== null) {
+          y += alignmentSnap.offsetY;
+        }
 
         // 确保位置非负，并吸附到最近的整数坐标
         x = Math.max(0, Math.round(x));
         y = Math.max(0, Math.round(y));
+
+        // 检查 Drawer 和 Modal 是否释放在其他组件上
+        if (config.requiresOverlap) {
+          // 查找是否有重叠的组件
+          const centerX = x + compWidth / 2;
+          const centerY = y + compHeight / 2;
+          const targetComponent = findComponentAtPosition(centerX, centerY, components);
+          
+          if (!targetComponent) {
+            // 没有释放在其他组件上，不创建
+            message.warning(`${config.name} 必须释放在其他组件上`);
+            return;
+          }
+          
+          // 创建组件并关联到目标组件
+          const newComponent = {
+            id: uuidv4(),
+            type: config.type,
+            name: config.name,
+            props: { ...config.defaultProps },
+            style: { ...config.defaultStyle },
+            children: [],
+            position: { x, y },
+            size: { ...config.defaultSize },
+            // 关联的目标组件 ID
+            triggerComponentId: targetComponent.id,
+          };
+
+          addComponent(newComponent);
+          return;
+        }
 
         const newComponent = {
           id: uuidv4(),
@@ -261,6 +405,7 @@ const App: React.FC = () => {
       // 移动已有组件
       if (activeData?.type === 'move') {
         const componentId = activeData.componentId;
+        // startEvent 已经在上面获取了
 
         // 找到组件当前位置
         const findComponent = (
@@ -278,25 +423,34 @@ const App: React.FC = () => {
         };
 
         const component = findComponent(components, componentId);
-        if (component) {
-          // 计算新位置，并吸附到最近的整数坐标
-          const newX = Math.max(
-            0,
-            Math.round(component.position.x + delta.x / canvas.scale)
-          );
-          const newY = Math.max(
-            0,
-            Math.round(component.position.y + delta.y / canvas.scale)
-          );
+        if (component && startEvent && currentMousePos) {
+          // 使用保存的鼠标实时位置计算偏移
+          const deltaX = currentMousePos.x - startEvent.clientX;
+          const deltaY = currentMousePos.y - startEvent.clientY;
+          
+          let newX = component.position.x + deltaX / canvas.scale;
+          let newY = component.position.y + deltaY / canvas.scale;
 
-          useEditorStore.getState().moveComponent(componentId, {
+          // 应用对齐吸附偏移
+          if (alignmentSnap.offsetX !== null) {
+            newX += alignmentSnap.offsetX;
+          }
+          if (alignmentSnap.offsetY !== null) {
+            newY += alignmentSnap.offsetY;
+          }
+
+          // 确保位置非负，并吸附到最近的整数坐标
+          newX = Math.max(0, Math.round(newX));
+          newY = Math.max(0, Math.round(newY));
+
+          moveComponent(componentId, {
             x: newX,
             y: newY,
           });
         }
       }
     },
-    [addComponent, setDragging, setDragOverCanvas, setDragPreview, canvas, components]
+    [addComponent, setDragging, setDragOverCanvas, setDragPreview, canvas, components, alignmentSnap, moveComponent, findComponentAtPosition, mousePosition]
   );
 
   // 清理
@@ -344,14 +498,32 @@ const App: React.FC = () => {
         </div>
 
         {/* 拖拽覆盖层 - 显示拖拽中的预览 */}
-        <DragOverlay dropAnimation={null} modifiers={[topLeftModifier]}>
-          {activeConfig && (
+        {activeConfig && mousePosition && dragPreview.size && (
+          <div
+            style={{
+              position: 'fixed',
+              left: mousePosition.x - (typeof dragPreview.size.width === 'number' ? dragPreview.size.width : 100) / 2,
+              top: mousePosition.y - (typeof dragPreview.size.height === 'number' ? dragPreview.size.height : 40) / 2,
+              pointerEvents: 'none',
+              zIndex: 9999,
+            }}
+          >
             <DragItem config={activeConfig} />
-          )}
-          {activeComponent && (
+          </div>
+        )}
+        {activeComponent && mousePosition && dragPreview.size && (
+          <div
+            style={{
+              position: 'fixed',
+              left: mousePosition.x - (typeof dragPreview.size.width === 'number' ? dragPreview.size.width : 100) / 2,
+              top: mousePosition.y - (typeof dragPreview.size.height === 'number' ? dragPreview.size.height : 40) / 2,
+              pointerEvents: 'none',
+              zIndex: 9999,
+            }}
+          >
             <DragItem component={activeComponent} />
-          )}
-        </DragOverlay>
+          </div>
+        )}
       </DndContext>
     </ConfigProvider>
   );

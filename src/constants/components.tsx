@@ -612,6 +612,8 @@ export const PRESET_COMPONENTS: ComponentConfig[] = [
     ],
     allowChildren: true,
     defaultSize: { width: 520, height: 'auto' },
+    requiresOverlap: true,
+    dragPreviewSize: { width: 50, height: 50 },
   },
 
   {
@@ -665,6 +667,8 @@ export const PRESET_COMPONENTS: ComponentConfig[] = [
     ],
     allowChildren: true,
     defaultSize: { width: 378, height: 300 },
+    requiresOverlap: true,
+    dragPreviewSize: { width: 50, height: 50 },
   },
 
   {

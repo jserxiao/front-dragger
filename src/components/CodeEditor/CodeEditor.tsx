@@ -1,19 +1,18 @@
-import React, { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import Editor, { Monaco, OnMount, loader } from '@monaco-editor/react';
 import type { editor } from 'monaco-editor';
-import { Button, message, Tooltip, Space } from 'antd';
+import { Button, message, Tooltip, Space, Tabs } from 'antd';
 import {
   CopyOutlined,
   DownloadOutlined,
   FormatPainterOutlined,
   FullscreenOutlined,
   FullscreenExitOutlined,
-  SyncOutlined,
   DownOutlined,
   UpOutlined,
 } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
-import { codeGenerator, codeParser } from '@/core';
+import { codeGenerator } from '@/core';
 import styles from './CodeEditor.module.css';
 
 // 配置 Monaco 使用国内 CDN 加速
@@ -26,20 +25,22 @@ loader.config({
 /**
  * 代码编辑器组件
  */
-const CodeEditor: React.FC = () => {
-  const { components, replaceComponents } = useEditorStore();
-  const [code, setCode] = useState('');
+const CodeEditor = () => {
+  const { components } = useEditorStore();
+  const [tsxCode, setTsxCode] = useState('');
+  const [cssCode, setCssCode] = useState('');
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isFormatLoading, setIsFormatLoading] = useState(false);
-  const [isApplying, setIsApplying] = useState(false);
-  const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const [activeTab, setActiveTab] = useState('tsx');
+  const tsxEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
+  const cssEditorRef = useRef<editor.IStandaloneCodeEditor | null>(null);
   const monacoRef = useRef<Monaco | null>(null);
   const isExternalUpdate = useRef(false);
 
   // 配置 Monaco 编辑器支持 JSX
-  const handleEditorMount: OnMount = (editor, monaco) => {
-    editorRef.current = editor;
+  const handleTsxEditorMount: OnMount = (editor, monaco) => {
+    tsxEditorRef.current = editor;
     monacoRef.current = monaco;
 
     // 配置 TypeScript 编译器选项以支持 JSX
@@ -122,10 +123,22 @@ const CodeEditor: React.FC = () => {
       }
     `, 'antd.d.ts');
 
-    // 快捷键：Ctrl+S 应用代码
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
-      handleApplyCode();
-    });
+    // 添加 CSS Module 类型定义
+    monaco.languages.typescript.typescriptDefaults.addExtraLib(`
+      declare module '*.module.css' {
+        const classes: { [key: string]: string };
+        export default classes;
+      }
+      declare module './GeneratedPage.module.css' {
+        const classes: { [key: string]: string };
+        export default classes;
+      }
+    `, 'css-modules.d.ts');
+  };
+
+  // 配置 CSS 编辑器
+  const handleCssEditorMount: OnMount = (editor) => {
+    cssEditorRef.current = editor;
   };
 
   // 生成代码
@@ -133,65 +146,69 @@ const CodeEditor: React.FC = () => {
     return codeGenerator.generateCode(components);
   }, [components]);
 
-  // 更新代码（来自画布变化）
+  // 更新代码（来自画布变化），自动格式化
   useEffect(() => {
-    isExternalUpdate.current = true;
-    setCode(generatedCode);
+    const formatAndUpdate = async () => {
+      isExternalUpdate.current = true;
+      try {
+        const formattedTsx = await codeGenerator.formatCode(generatedCode.tsx);
+        setTsxCode(formattedTsx);
+      } catch {
+        setTsxCode(generatedCode.tsx);
+      }
+      setCssCode(generatedCode.css);
+    };
+    formatAndUpdate();
   }, [generatedCode]);
 
   // 格式化代码
   const handleFormat = useCallback(async () => {
     setIsFormatLoading(true);
     try {
-      const formatted = await codeGenerator.formatCode(code);
-      setCode(formatted);
+      const formattedTsx = await codeGenerator.formatCode(tsxCode);
+      setTsxCode(formattedTsx);
       message.success('格式化成功');
     } catch (error) {
       message.error('格式化失败');
     } finally {
       setIsFormatLoading(false);
     }
-  }, [code]);
+  }, [tsxCode]);
 
   // 复制代码
   const handleCopy = useCallback(() => {
+    const code = activeTab === 'tsx' ? tsxCode : cssCode;
     navigator.clipboard.writeText(code).then(() => {
       message.success('已复制到剪贴板');
     });
-  }, [code]);
+  }, [activeTab, tsxCode, cssCode]);
 
   // 下载代码
   const handleDownload = useCallback(() => {
-    const blob = new Blob([code], { type: 'text/typescript' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = 'GeneratedPage.tsx';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    message.success('下载成功');
-  }, [code]);
+    // 下载 TSX 文件
+    const tsxBlob = new Blob([tsxCode], { type: 'text/typescript' });
+    const tsxUrl = URL.createObjectURL(tsxBlob);
+    const tsxLink = document.createElement('a');
+    tsxLink.href = tsxUrl;
+    tsxLink.download = 'GeneratedPage.tsx';
+    document.body.appendChild(tsxLink);
+    tsxLink.click();
+    document.body.removeChild(tsxLink);
+    URL.revokeObjectURL(tsxUrl);
 
-  // 应用代码到画布
-  const handleApplyCode = useCallback(() => {
-    setIsApplying(true);
-    try {
-      const parsedComponents = codeParser.parseCode(code);
-      if (parsedComponents.length > 0) {
-        replaceComponents(parsedComponents);
-        message.success('代码已应用到画布');
-      } else {
-        message.warning('未解析到有效组件');
-      }
-    } catch (error) {
-      message.error('代码解析失败');
-      console.error('解析错误:', error);
-    } finally {
-      setIsApplying(false);
-    }
-  }, [code, replaceComponents]);
+    // 下载 CSS 文件
+    const cssBlob = new Blob([cssCode], { type: 'text/css' });
+    const cssUrl = URL.createObjectURL(cssBlob);
+    const cssLink = document.createElement('a');
+    cssLink.href = cssUrl;
+    cssLink.download = 'GeneratedPage.css';
+    document.body.appendChild(cssLink);
+    cssLink.click();
+    document.body.removeChild(cssLink);
+    URL.revokeObjectURL(cssUrl);
+
+    message.success('下载成功');
+  }, [tsxCode, cssCode]);
 
   // 切换全屏
   const toggleFullscreen = useCallback(() => {
@@ -203,14 +220,22 @@ const CodeEditor: React.FC = () => {
     setIsCollapsed(!isCollapsed);
   }, [isCollapsed]);
 
-  // 处理代码变化
-  const handleCodeChange = useCallback((value: string | undefined) => {
-    // 忽略外部更新触发的变化
+  // 处理 TSX 代码变化
+  const handleTsxCodeChange = useCallback((value: string | undefined) => {
     if (isExternalUpdate.current) {
       isExternalUpdate.current = false;
       return;
     }
-    setCode(value || '');
+    setTsxCode(value || '');
+  }, []);
+
+  // 处理 CSS 代码变化
+  const handleCssCodeChange = useCallback((value: string | undefined) => {
+    if (isExternalUpdate.current) {
+      isExternalUpdate.current = false;
+      return;
+    }
+    setCssCode(value || '');
   }, []);
 
   return (
@@ -241,15 +266,6 @@ const CodeEditor: React.FC = () => {
         <h3 className={styles.title}>生成的代码</h3>
         <div className={styles.headerActions}>
           <Space size="small">
-            <Tooltip title="应用到画布 (Ctrl+S)">
-              <Button
-                size="small"
-                type="primary"
-                icon={<SyncOutlined />}
-                onClick={handleApplyCode}
-                loading={isApplying}
-              />
-            </Tooltip>
             <Tooltip title="格式化">
               <Button
                 size="small"
@@ -283,42 +299,94 @@ const CodeEditor: React.FC = () => {
         </div>
       </div>
 
-      <div className={styles.editor}>
-        <Editor
-          height="100%"
-          defaultLanguage="typescript"
-          language="typescript"
-          path="file:///GeneratedPage.tsx"
-          theme="vs-dark"
-          value={code}
-          onChange={handleCodeChange}
-          onMount={handleEditorMount}
-          loading={
-            <div className={styles.loading}>
-              <SyncOutlined spin style={{ fontSize: 24, color: '#1890ff' }} />
-              <span style={{ marginTop: 8, color: '#8c8c8c' }}>加载编辑器中...</span>
-            </div>
-          }
-          options={{
-            minimap: { enabled: false },
-            fontSize: 13,
-            lineNumbers: 'on',
-            roundedSelection: false,
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-            wordWrap: 'on',
-            folding: true,
-            readOnly: false,
-            quickSuggestions: true,
-            suggestOnTriggerCharacters: true,
-          }}
+      <div className={styles.editorContainer}>
+        <Tabs
+          activeKey={activeTab}
+          onChange={setActiveTab}
+          className={styles.tabs}
+          destroyOnHidden
+          items={[
+            {
+              key: 'tsx',
+              label: 'TSX',
+              children: (
+                <div className={styles.editor}>
+                  <Editor
+                    height="100%"
+                    defaultLanguage="typescript"
+                    language="typescript"
+                    path="file:///GeneratedPage.tsx"
+                    theme="vs-dark"
+                    value={tsxCode}
+                    onChange={handleTsxCodeChange}
+                    onMount={handleTsxEditorMount}
+                    loading={
+                      <div className={styles.loading}>
+                        加载编辑器中...
+                      </div>
+                    }
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                      roundedSelection: false,
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                      wordWrap: 'on',
+                      folding: true,
+                      readOnly: false,
+                      quickSuggestions: true,
+                      suggestOnTriggerCharacters: true,
+                    }}
+                  />
+                </div>
+              ),
+            },
+            {
+              key: 'css',
+              label: 'CSS',
+              children: (
+                <div className={styles.editor}>
+                  <Editor
+                    height="100%"
+                    defaultLanguage="css"
+                    language="css"
+                    path="file:///GeneratedPage.css"
+                    theme="vs-dark"
+                    value={cssCode}
+                    onChange={handleCssCodeChange}
+                    onMount={handleCssEditorMount}
+                    loading={
+                      <div className={styles.loading}>
+                        加载编辑器中...
+                      </div>
+                    }
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 13,
+                      lineNumbers: 'on',
+                      roundedSelection: false,
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                      wordWrap: 'on',
+                      folding: true,
+                      readOnly: false,
+                      quickSuggestions: true,
+                      suggestOnTriggerCharacters: true,
+                    }}
+                  />
+                </div>
+              ),
+            },
+          ]}
         />
       </div>
 
       <div className={styles.footer}>
         <span className={styles.stats}>
-          {components.length} 个组件 | {code.split('\n').length} 行代码
+          {components.length} 个组件 | TSX: {tsxCode.split('\n').length} 行 | CSS: {cssCode.split('\n').length} 行
         </span>
       </div>
       </div>
