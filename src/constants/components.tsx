@@ -22,6 +22,10 @@ import {
   MenuFoldOutlined,
   InfoCircleOutlined,
   RocketOutlined,
+  CodeOutlined,
+  OrderedListOutlined,
+  UnorderedListOutlined,
+  LineOutlined,
 } from '@ant-design/icons';
 
 /**
@@ -33,6 +37,7 @@ export const CATEGORIES: CategoryConfig[] = [
   { key: 'layout', name: '布局组件', order: 3 },
   { key: 'display', name: '展示组件', order: 4 },
   { key: 'feedback', name: '反馈组件', order: 5 },
+  { key: 'html', name: '原生HTML', order: 6 },
 ];
 
 /**
@@ -1244,5 +1249,477 @@ export const PRESET_COMPONENTS: ComponentConfig[] = [
     ],
     allowChildren: false,
     defaultSize: { width: '100%', height: 'auto' },
+  },
+
+  // ============ 原生HTML元素 ============
+  {
+    type: 'HTMLElement.div',
+    name: 'div',
+    icon: <BorderOutlined />,
+    category: 'html',
+    defaultProps: {},
+    defaultStyle: {
+      minWidth: 100,
+      minHeight: 60,
+      backgroundColor: '#f5f5f5',
+    },
+    propSchema: [],
+    allowChildren: true,
+    defaultSize: { width: 200, height: 100 },
+  },
+
+  {
+    type: 'HTMLElement.span',
+    name: 'span',
+    icon: <FileTextOutlined />,
+    category: 'html',
+    defaultProps: {
+      children: 'span 文本',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'children',
+        label: '文本内容',
+        type: 'string',
+        defaultValue: 'span 文本',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.p',
+    name: 'p',
+    icon: <FileTextOutlined />,
+    category: 'html',
+    defaultProps: {
+      children: '这是一段段落文本',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'children',
+        label: '文本内容',
+        type: 'string',
+        defaultValue: '这是一段段落文本',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.h1',
+    name: 'h1',
+    icon: <FileTextOutlined />,
+    category: 'html',
+    defaultProps: {
+      children: '标题 1',
+    },
+    defaultStyle: {
+      fontSize: 32,
+      fontWeight: 'bold',
+    },
+    propSchema: [
+      {
+        name: 'children',
+        label: '文本内容',
+        type: 'string',
+        defaultValue: '标题 1',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.h2',
+    name: 'h2',
+    icon: <FileTextOutlined />,
+    category: 'html',
+    defaultProps: {
+      children: '标题 2',
+    },
+    defaultStyle: {
+      fontSize: 28,
+      fontWeight: 'bold',
+    },
+    propSchema: [
+      {
+        name: 'children',
+        label: '文本内容',
+        type: 'string',
+        defaultValue: '标题 2',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.h3',
+    name: 'h3',
+    icon: <FileTextOutlined />,
+    category: 'html',
+    defaultProps: {
+      children: '标题 3',
+    },
+    defaultStyle: {
+      fontSize: 24,
+      fontWeight: 'bold',
+    },
+    propSchema: [
+      {
+        name: 'children',
+        label: '文本内容',
+        type: 'string',
+        defaultValue: '标题 3',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.img',
+    name: 'img',
+    icon: <PictureOutlined />,
+    category: 'html',
+    defaultProps: {
+      src: 'https://via.placeholder.com/200x150',
+      alt: '图片',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'src',
+        label: '图片地址',
+        type: 'string',
+        defaultValue: 'https://via.placeholder.com/200x150',
+        group: '基础',
+      },
+      {
+        name: 'alt',
+        label: '替代文本',
+        type: 'string',
+        defaultValue: '图片',
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 200, height: 150 },
+  },
+
+  {
+    type: 'HTMLElement.a',
+    name: 'a',
+    icon: <FileTextOutlined />,
+    category: 'html',
+    defaultProps: {
+      href: 'https://example.com',
+      children: '链接文字',
+      target: '_blank',
+    },
+    defaultStyle: {
+      color: '#1890ff',
+      textDecoration: 'underline',
+    },
+    propSchema: [
+      {
+        name: 'children',
+        label: '链接文字',
+        type: 'string',
+        defaultValue: '链接文字',
+        group: '基础',
+      },
+      {
+        name: 'href',
+        label: '链接地址',
+        type: 'string',
+        defaultValue: 'https://example.com',
+        group: '基础',
+      },
+      {
+        name: 'target',
+        label: '打开方式',
+        type: 'select',
+        defaultValue: '_blank',
+        options: [
+          { label: '新窗口', value: '_blank' },
+          { label: '当前窗口', value: '_self' },
+        ],
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.ul',
+    name: 'ul',
+    icon: <UnorderedListOutlined />,
+    category: 'html',
+    defaultProps: {
+      items: ['列表项 1', '列表项 2', '列表项 3'],
+    },
+    defaultStyle: {},
+    propSchema: [],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.ol',
+    name: 'ol',
+    icon: <OrderedListOutlined />,
+    category: 'html',
+    defaultProps: {
+      items: ['列表项 1', '列表项 2', '列表项 3'],
+    },
+    defaultStyle: {},
+    propSchema: [],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.li',
+    name: 'li',
+    icon: <LineOutlined />,
+    category: 'html',
+    defaultProps: {
+      children: '列表项',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'children',
+        label: '文本内容',
+        type: 'string',
+        defaultValue: '列表项',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.button',
+    name: 'button',
+    icon: <AppstoreOutlined />,
+    category: 'html',
+    defaultProps: {
+      children: '按钮',
+    },
+    defaultStyle: {
+      padding: '8px 16px',
+      backgroundColor: '#1890ff',
+      color: '#fff',
+      border: 'none',
+      borderRadius: 4,
+      cursor: 'pointer',
+    },
+    propSchema: [
+      {
+        name: 'children',
+        label: '按钮文字',
+        type: 'string',
+        defaultValue: '按钮',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.input',
+    name: 'input',
+    icon: <FormOutlined />,
+    category: 'html',
+    defaultProps: {
+      type: 'text',
+      placeholder: '请输入',
+    },
+    defaultStyle: {
+      padding: '8px 12px',
+      border: '1px solid #d9d9d9',
+      borderRadius: 4,
+    },
+    propSchema: [
+      {
+        name: 'type',
+        label: '输入类型',
+        type: 'select',
+        defaultValue: 'text',
+        options: [
+          { label: '文本', value: 'text' },
+          { label: '密码', value: 'password' },
+          { label: '邮箱', value: 'email' },
+          { label: '数字', value: 'number' },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'placeholder',
+        label: '占位文本',
+        type: 'string',
+        defaultValue: '请输入',
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 200, height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.textarea',
+    name: 'textarea',
+    icon: <FormOutlined />,
+    category: 'html',
+    defaultProps: {
+      placeholder: '请输入',
+      rows: 4,
+    },
+    defaultStyle: {
+      padding: '8px 12px',
+      border: '1px solid #d9d9d9',
+      borderRadius: 4,
+    },
+    propSchema: [
+      {
+        name: 'placeholder',
+        label: '占位文本',
+        type: 'string',
+        defaultValue: '请输入',
+        group: '基础',
+      },
+      {
+        name: 'rows',
+        label: '行数',
+        type: 'number',
+        defaultValue: 4,
+        min: 2,
+        max: 10,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 300, height: 100 },
+  },
+
+  {
+    type: 'HTMLElement.select',
+    name: 'select',
+    icon: <BorderOutlined />,
+    category: 'html',
+    defaultProps: {
+      options: [
+        { label: '选项 1', value: '1' },
+        { label: '选项 2', value: '2' },
+      ],
+    },
+    defaultStyle: {
+      padding: '8px 12px',
+      border: '1px solid #d9d9d9',
+      borderRadius: 4,
+    },
+    propSchema: [],
+    allowChildren: false,
+    defaultSize: { width: 200, height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.form',
+    name: 'form',
+    icon: <ProfileOutlined />,
+    category: 'html',
+    defaultProps: {},
+    defaultStyle: {
+      padding: 16,
+      border: '1px solid #d9d9d9',
+      borderRadius: 4,
+    },
+    propSchema: [],
+    allowChildren: true,
+    defaultSize: { width: 300, height: 200 },
+  },
+
+  {
+    type: 'HTMLElement.table',
+    name: 'table',
+    icon: <TableOutlined />,
+    category: 'html',
+    defaultProps: {},
+    defaultStyle: {
+      borderCollapse: 'collapse',
+    },
+    propSchema: [],
+    allowChildren: true,
+    defaultSize: { width: 300, height: 150 },
+  },
+
+  {
+    type: 'HTMLElement.code',
+    name: 'code',
+    icon: <CodeOutlined />,
+    category: 'html',
+    defaultProps: {
+      children: 'console.log("Hello")',
+    },
+    defaultStyle: {
+      fontFamily: 'monospace',
+      backgroundColor: '#f5f5f5',
+      padding: '4px 8px',
+      borderRadius: 4,
+    },
+    propSchema: [
+      {
+        name: 'children',
+        label: '代码内容',
+        type: 'string',
+        defaultValue: 'console.log("Hello")',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'HTMLElement.pre',
+    name: 'pre',
+    icon: <CodeOutlined />,
+    category: 'html',
+    defaultProps: {
+      children: '// 代码块\nfunction hello() {\n  console.log("Hello");\n}',
+    },
+    defaultStyle: {
+      fontFamily: 'monospace',
+      backgroundColor: '#f5f5f5',
+      padding: 16,
+      borderRadius: 4,
+      whiteSpace: 'pre-wrap',
+    },
+    propSchema: [
+      {
+        name: 'children',
+        label: '代码内容',
+        type: 'string',
+        defaultValue: '// 代码块\nfunction hello() {\n  console.log("Hello");\n}',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 300, height: 120 },
   },
 ];

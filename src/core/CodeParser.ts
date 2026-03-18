@@ -131,7 +131,7 @@ export class CodeParser {
     attributes.forEach((attr) => {
       if (t.isJSXAttribute(attr)) {
         const name = t.isJSXIdentifier(attr.name) ? attr.name.name : '';
-        const value = this.parseAttributeValue(attr.value);
+        const value = this.parseAttributeValue(attr.value ?? null);
         props[name] = value;
       }
     });
@@ -142,11 +142,16 @@ export class CodeParser {
   /**
    * 解析属性值
    */
-  private parseAttributeValue(value: t.JSXAttributeValue | t.JSXEmptyExpression | null): any {
+  private parseAttributeValue(value: t.StringLiteral | t.JSXExpressionContainer | t.JSXElement | t.JSXFragment | null): any {
     if (value === null) return true;
 
     if (t.isStringLiteral(value)) {
       return value.value;
+    }
+
+    if (t.isJSXElement(value) || t.isJSXFragment(value)) {
+      // JSX 元素作为属性值，暂不处理
+      return undefined;
     }
 
     if (t.isJSXExpressionContainer(value)) {
@@ -210,7 +215,7 @@ export class CodeParser {
   /**
    * 解析表达式
    */
-  private parseExpression(node: t.Expression): any {
+  private parseExpression(node: t.Expression | t.PatternLike | t.PrivateName): any {
     if (t.isStringLiteral(node)) return node.value;
     if (t.isNumericLiteral(node)) return node.value;
     if (t.isBooleanLiteral(node)) return node.value;
@@ -222,6 +227,10 @@ export class CodeParser {
     }
     if (t.isObjectExpression(node)) {
       return this.parseObjectExpression(node);
+    }
+    // 处理标识符（如变量名）
+    if (t.isIdentifier(node)) {
+      return node.name;
     }
     return undefined;
   }

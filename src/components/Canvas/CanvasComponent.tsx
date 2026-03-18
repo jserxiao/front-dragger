@@ -234,6 +234,49 @@ const ComponentMap: Record<string, React.FC<any>> = {
   Radio: (props: any) => <Radio.Group {...props}><Radio value="a">选项A</Radio><Radio value="b">选项B</Radio><Radio value="c">选项C</Radio></Radio.Group>,
   // 数据展示
   Table,
+  // 原生 HTML 元素
+  'HTMLElement.div': (props: any) => <div {...props}>{props.children}</div>,
+  'HTMLElement.span': (props: any) => <span {...props}>{props.children}</span>,
+  'HTMLElement.p': (props: any) => <p {...props}>{props.children}</p>,
+  'HTMLElement.h1': (props: any) => <h1 {...props}>{props.children}</h1>,
+  'HTMLElement.h2': (props: any) => <h2 {...props}>{props.children}</h2>,
+  'HTMLElement.h3': (props: any) => <h3 {...props}>{props.children}</h3>,
+  'HTMLElement.img': (props: any) => <img {...props} alt={props.alt || ''} />,
+  'HTMLElement.a': (props: any) => <a {...props}>{props.children}</a>,
+  'HTMLElement.ul': (props: any) => {
+    const { items, ...rest } = props;
+    return (
+      <ul {...rest}>
+        {items ? items.map((item: string, index: number) => <li key={index}>{item}</li>) : props.children}
+      </ul>
+    );
+  },
+  'HTMLElement.ol': (props: any) => {
+    const { items, ...rest } = props;
+    return (
+      <ol {...rest}>
+        {items ? items.map((item: string, index: number) => <li key={index}>{item}</li>) : props.children}
+      </ol>
+    );
+  },
+  'HTMLElement.li': (props: any) => <li {...props}>{props.children}</li>,
+  'HTMLElement.button': (props: any) => <button {...props}>{props.children}</button>,
+  'HTMLElement.input': (props: any) => <input {...props} />,
+  'HTMLElement.textarea': (props: any) => <textarea {...props} />,
+  'HTMLElement.select': (props: any) => {
+    const { options, ...rest } = props;
+    return (
+      <select {...rest}>
+        {options ? options.map((opt: { label: string; value: string }, index: number) => (
+          <option key={index} value={opt.value}>{opt.label}</option>
+        )) : null}
+      </select>
+    );
+  },
+  'HTMLElement.form': (props: any) => <form {...props}>{props.children}</form>,
+  'HTMLElement.table': (props: any) => <table {...props}>{props.children}</table>,
+  'HTMLElement.code': (props: any) => <code {...props}>{props.children}</code>,
+  'HTMLElement.pre': (props: any) => <pre {...props}>{props.children}</pre>,
 };
 
 interface CanvasProps {

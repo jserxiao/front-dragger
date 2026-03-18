@@ -24,11 +24,13 @@ import {
   SnippetsOutlined,
   ZoomInOutlined,
   ZoomOutOutlined,
-  DragOutlined,
+  AppstoreAddOutlined,
 } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
-import { codeGenerator } from '@/core';
+import { ComponentRegistry } from '@/core';
 import { SHORTCUTS, getShortcutText } from '@/constants';
+import { ComponentNode } from '@/types';
+import { BatchAddModal, TreeNodeData } from '@/components/BatchAddModal';
 import styles from './Toolbar.module.css';
 
 /**
@@ -36,7 +38,6 @@ import styles from './Toolbar.module.css';
  */
 const Toolbar: React.FC = () => {
   const {
-    components,
     canvas,
     undo,
     redo,
@@ -60,29 +61,26 @@ const Toolbar: React.FC = () => {
 
   const { selectedIds, scale, showGrid, snapToGrid, gridSize } = canvas;
   
-  // 计算撤销/重做是否可用
-  // 撤销：有历史记录可以撤销
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const undoDisabled = historyIndex <= 0;
-  // 重做：画布上有组件时就不禁用
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const redoDisabled = components.length === 0;
-
-  // 导入 JSON 的 Modal
-  const [importModalVisible, setImportModalVisible] = useState(false);
-  const [importJson, setImportJson] = useState('');
-
-  // 撤销
+  // 处理撤销/重做
   const handleUndo = useCallback(() => {
     if (historyIndex > 0) {
       undo();
     }
   }, [historyIndex, undo]);
 
-  // 重做
   const handleRedo = useCallback(() => {
-      redo();
-  }, [historyIndex, redo]);
+    redo();
+  }, [redo]);
+
+  // 导入 JSON 的 Modal
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [importJson, setImportJson] = useState('');
+
+  // 批量添加组件的 Modal
+  const [batchAddModalVisible, setBatchAddModalVisible] = useState(false);
+
+  // 获取 addComponent 方法
+  const addComponent = useEditorStore((state) => state.addComponent);
 
   // 删除选中
   const handleDelete = useCallback(() => {
@@ -168,6 +166,82 @@ const Toolbar: React.FC = () => {
     saveHistory('update', '保存项目');
     message.success('已保存到本地');
   }, [exportComponents, saveHistory]);
+
+  // 将 TreeNodeData 转换为 ComponentNode
+  const convertTreeNodeToComponent = useCallback((
+    node: TreeNodeData,
+    parentId: string | null = null,
+    parentPosition: { x: number; y: number } = { x: 0, y: 0 }
+  ): ComponentNode => {
+    const config = ComponentRegistry.getComponent(node.componentType);
+    if (!config) {
+      throw new Error(`Unknown component type: ${node.componentType}`);
+    }
+
+    // 计算绝对位置：根节点为 (0, 0)，子节点为父节点位置 + 相对偏移
+    const absolutePosition = {
+      x: parentPosition.x + node.relativeX,
+      y: parentPosition.y + node.relativeY,
+    };
+
+    // 子节点的相对位置（用于 CanvasItem 渲染）
+    const relativePosition = parentId ? { x: node.relativeX, y: node.relativeY } : undefined;
+
+    const componentNode: ComponentNode = {
+      id: node.id,
+      type: node.componentType,
+      name: node.componentName,
+      props: {},
+      style: { ...config.defaultStyle },
+      children: [], // 不再嵌套子组件，保持为空
+      position: absolutePosition,
+      relativePosition,
+      size: { ...config.defaultSize },
+      parentId: parentId || undefined,
+      extraProps: { ...config.defaultProps, className: node.componentType.toLowerCase() },
+    };
+
+    return componentNode;
+  }, []);
+
+  // 扁平化节点树，收集所有节点
+  const flattenNodes = useCallback((nodes: TreeNodeData[], result: ComponentNode[] = []): ComponentNode[] => {
+    nodes.forEach(node => {
+      const config = ComponentRegistry.getComponent(node.componentType);
+      if (!config) return;
+
+      // 找到父节点的位置
+      let parentPosition = { x: 0, y: 0 };
+      if (node.parentId) {
+        const parent = result.find(n => n.id === node.parentId);
+        if (parent) {
+          parentPosition = parent.position;
+        }
+      }
+
+      const componentNode = convertTreeNodeToComponent(node, node.parentId, parentPosition);
+      result.push(componentNode);
+
+      // 递归处理子节点
+      if (node.children.length > 0) {
+        flattenNodes(node.children, result);
+      }
+    });
+    return result;
+  }, [convertTreeNodeToComponent]);
+
+  // 处理批量添加确认
+  const handleBatchAddConfirm = useCallback((nodes: TreeNodeData[]) => {
+    // 扁平化所有节点
+    const allComponents = flattenNodes(nodes);
+    
+    // 按顺序添加所有组件（先添加父节点，再添加子节点）
+    allComponents.forEach(componentNode => {
+      addComponent(componentNode);
+    });
+    
+    message.success(`成功添加 ${allComponents.length} 个组件`);
+  }, [addComponent, flattenNodes]);
 
   // 快捷键处理
   useEffect(() => {
@@ -374,6 +448,19 @@ const Toolbar: React.FC = () => {
 
       <div className={styles.center}>
         <Space size={4}>
+          {/* 按钮组 */}
+          <Tooltip title="批量增加组件">
+            <Button
+              type="text"
+              icon={<AppstoreAddOutlined />}
+              onClick={() => setBatchAddModalVisible(true)}
+            >
+              批量添加
+            </Button>
+          </Tooltip>
+
+          <div className={styles.divider} />
+
           {/* 缩放 */}
           <Tooltip title="放大 (Ctrl + =)">
             <Button
@@ -467,6 +554,13 @@ const Toolbar: React.FC = () => {
           placeholder="请粘贴 JSON 配置..."
         />
       </Modal>
+
+      {/* 批量添加组件 Modal */}
+      <BatchAddModal
+        visible={batchAddModalVisible}
+        onCancel={() => setBatchAddModalVisible(false)}
+        onConfirm={handleBatchAddConfirm}
+      />
     </div>
   );
 };

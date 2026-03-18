@@ -28,12 +28,16 @@ export class CodeGenerator {
    * 生成完整代码（TSX + CSS）
    */
   generateCode(components: ComponentNode[]): GeneratedCodeResult {
-    const imports = this.generateImports(components);
+    // 创建组件 ID 到组件的映射，方便查找子组件
+    const componentMap = new Map<string, ComponentNode>();
+    components.forEach(c => componentMap.set(c.id, c));
+
+    const imports = this.generateImports(components, componentMap);
     const relations = this.collectOverlayRelations(components);
     const stateHooks = this.generateStateHooks(relations);
-    const jsx = this.generateJSX(components, 0, relations);
+    const jsx = this.generateJSX(components, 0, relations, componentMap);
     const interfaces = this.generateInterfaces(components);
-    const css = this.generateCSS(components);
+    const css = this.generateCSS(components, componentMap);
 
     const tsx = `${imports}
 
@@ -57,7 +61,7 @@ ${jsx}
     const relations: OverlayRelation[] = [];
     let overlayIndex = 0;
 
-    const processComponent = (component: ComponentNode) => {
+    components.forEach(component => {
       // 检查是否是 Drawer 或 Modal 且有关联的触发组件
       if ((component.type === 'Drawer' || component.type === 'Modal') && component.triggerComponentId) {
         overlayIndex++;
@@ -69,13 +73,8 @@ ${jsx}
           stateName: `${component.type.toLowerCase()}Open${overlayIndex}`,
         });
       }
+    });
 
-      if (component.children?.length) {
-        component.children.forEach(processComponent);
-      }
-    };
-
-    components.forEach(processComponent);
     return relations;
   }
 
@@ -95,11 +94,14 @@ ${jsx}
   /**
    * 生成导入语句
    */
-  private generateImports(components: ComponentNode[]): string {
+  private generateImports(
+    components: ComponentNode[],
+    componentMap: Map<string, ComponentNode>
+  ): string {
     const importSet = new Set<string>();
     importSet.add("import React from 'react';");
 
-    const antdComponents = this.collectAntdComponents(components);
+    const antdComponents = this.collectAntdComponents(components, componentMap);
     if (antdComponents.size > 0) {
       importSet.add(
         `import { ${Array.from(antdComponents).join(', ')} } from 'antd';`
@@ -118,20 +120,21 @@ ${jsx}
    */
   private collectAntdComponents(
     components: ComponentNode[],
+    _componentMap: Map<string, ComponentNode>,
     set = new Set<string>()
   ): Set<string> {
+    // 遍历所有组件（扁平化存储，所有组件都在顶级数组中）
     components.forEach((component) => {
       const type = component.type;
 
-      // 特殊处理 Typography
-      if (type.startsWith('Typography.')) {
+      // 跳过原生 HTML 元素
+      if (type.startsWith('HTMLElement.')) {
+        // 原生 HTML 元素不需要导入
+      } else if (type.startsWith('Typography.')) {
+        // 特殊处理 Typography
         set.add('Typography');
       } else {
         set.add(type);
-      }
-
-      if (component.children?.length) {
-        this.collectAntdComponents(component.children, set);
       }
     });
 
@@ -141,15 +144,27 @@ ${jsx}
   /**
    * 生成 JSX 代码
    */
-  private generateJSX(components: ComponentNode[], indent: number, relations: OverlayRelation[] = []): string {
+  private generateJSX(
+    components: ComponentNode[],
+    indent: number,
+    relations: OverlayRelation[],
+    componentMap: Map<string, ComponentNode>
+  ): string {
     const spaces = '  '.repeat(indent + 1);
 
     if (components.length === 0) {
       return `${spaces}<div />`;
     }
 
-    const jsx = components.map((component) => {
-      return this.componentToJSX(component, indent + 1, relations);
+    // 过滤掉子组件（有 parentId 的组件），只渲染顶级组件
+    const topLevelComponents = components.filter(c => !c.parentId);
+
+    if (topLevelComponents.length === 0) {
+      return `${spaces}<div />`;
+    }
+
+    const jsx = topLevelComponents.map((component) => {
+      return this.componentToJSX(component, indent + 1, relations, componentMap);
     }).join('\n');
 
     return `${spaces}<div style={{ padding: 24 }}>\n${jsx}\n${spaces}</div>`;
@@ -158,7 +173,12 @@ ${jsx}
   /**
    * 单个组件转 JSX
    */
-  private componentToJSX(component: ComponentNode, indent: number, relations: OverlayRelation[] = []): string {
+  private componentToJSX(
+    component: ComponentNode,
+    indent: number,
+    relations: OverlayRelation[],
+    componentMap: Map<string, ComponentNode>
+  ): string {
     const spaces = '  '.repeat(indent);
     const type = this.getComponentType(component.type);
     const props = this.generateProps(component);
@@ -197,9 +217,22 @@ ${jsx}
     const allProps = { ...props, ...style };
     const propsStr = this.propsToString(allProps);
 
+    // 查找子组件：优先使用 children 数组，否则从 componentMap 中查找
+    const childComponents: ComponentNode[] = [];
     if (component.children?.length) {
-      const childrenJSX = component.children
-        .map((child) => this.componentToJSX(child, indent + 1, relations))
+      childComponents.push(...component.children);
+    } else {
+      // 从扁平化存储中查找子组件
+      componentMap.forEach(child => {
+        if (child.parentId === component.id) {
+          childComponents.push(child);
+        }
+      });
+    }
+
+    if (childComponents.length > 0) {
+      const childrenJSX = childComponents
+        .map((child) => this.componentToJSX(child, indent + 1, relations, componentMap))
         .join('\n');
       return `${spaces}<${type}${propsStr}>\n${childrenJSX}\n${spaces}</${type}>`;
     }
@@ -218,8 +251,13 @@ ${jsx}
    * 获取组件类型
    */
   private getComponentType(type: string): string {
+    // 处理 Typography 类型
     if (type.startsWith('Typography.')) {
       return type;
+    }
+    // 处理原生 HTML 元素：HTMLElement.div -> div
+    if (type.startsWith('HTMLElement.')) {
+      return type.replace('HTMLElement.', '');
     }
     return type;
   }
@@ -264,11 +302,17 @@ ${jsx}
 
   /**
    * 生成 CSS 代码
+   * 注意：组件可能扁平化存储在顶级数组中（通过 parentId 关联），
+   * 也可能嵌套存储在 children 中，需要处理两种情况
    */
-  private generateCSS(components: ComponentNode[]): string {
+  private generateCSS(
+    components: ComponentNode[],
+    _componentMap: Map<string, ComponentNode>
+  ): string {
     const cssRules: string[] = [];
 
-    const processComponent = (component: ComponentNode) => {
+    // 遍历所有组件（扁平化存储，所有组件都在顶级数组中）
+    components.forEach((component) => {
       // 优先使用 extraProps.className，否则使用组件类型（小写）+ 哈希值
       const baseClassName = component.extraProps?.className || component.type.toLowerCase();
       const className = `${baseClassName}-${component.id.slice(0, 8)}`;
@@ -307,14 +351,7 @@ ${jsx}
       if (rules.length > 0) {
         cssRules.push(`.${className} {\n${rules.join('\n')}\n}`);
       }
-
-      // 递归处理子组件
-      if (component.children?.length) {
-        component.children.forEach(processComponent);
-      }
-    };
-
-    components.forEach(processComponent);
+    });
 
     if (cssRules.length === 0) {
       return '/* 暂无样式 */\n';

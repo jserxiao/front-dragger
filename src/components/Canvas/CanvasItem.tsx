@@ -167,14 +167,15 @@ const CanvasItem: React.FC<CanvasItemProps> = ({
 
   const style: React.CSSProperties = {
     position: 'absolute',
-    // 如果有父级且不是通过 dnd-kit 拖拽，使用相对位置
-    left: component.parentId && !transform ? (component.relativePosition?.x ?? 0) : component.position.x,
-    top: component.parentId && !transform ? (component.relativePosition?.y ?? 0) : component.position.y,
+    // 所有组件都使用绝对位置（包括子组件）
+    // 子组件的 position 已经是相对于父组件的偏移量计算后的绝对坐标
+    left: component.position.x,
+    top: component.position.y,
     width: component.size.width,
     height: component.size.height,
     transform: CSS.Translate.toString(transform),
     opacity: isDragging ? 0.5 : 1,
-    zIndex: isSelected ? 10 : 1,
+    zIndex: isSelected ? 10 : (component.parentId ? 5 : 1),
     cursor: isDragging ? 'grabbing' : 'grab',
   };
 

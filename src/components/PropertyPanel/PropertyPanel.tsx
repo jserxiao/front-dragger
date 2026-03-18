@@ -678,11 +678,14 @@ const PropertyPanel: React.FC = () => {
                   <InputNumber
                     value={selectedComponent.relativePosition?.x ?? 0}
                     onChange={(value) => {
+                      const newX = value ?? 0;
+                      const newY = selectedComponent.relativePosition?.y ?? 0;
+                      // 获取父组件位置来计算新的绝对位置
+                      const parent = selectedComponent.parentId ? getComponentById(selectedComponent.parentId) : null;
+                      const parentPos = parent?.position ?? { x: 0, y: 0 };
                       updateComponent(selectedComponent.id, {
-                        relativePosition: {
-                          x: value ?? 0,
-                          y: selectedComponent.relativePosition?.y ?? 0,
-                        },
+                        relativePosition: { x: newX, y: newY },
+                        position: { x: parentPos.x + newX, y: parentPos.y + newY },
                       });
                     }}
                     style={{ width: '100%' }}
@@ -693,11 +696,14 @@ const PropertyPanel: React.FC = () => {
                   <InputNumber
                     value={selectedComponent.relativePosition?.y ?? 0}
                     onChange={(value) => {
+                      const newX = selectedComponent.relativePosition?.x ?? 0;
+                      const newY = value ?? 0;
+                      // 获取父组件位置来计算新的绝对位置
+                      const parent = selectedComponent.parentId ? getComponentById(selectedComponent.parentId) : null;
+                      const parentPos = parent?.position ?? { x: 0, y: 0 };
                       updateComponent(selectedComponent.id, {
-                        relativePosition: {
-                          x: selectedComponent.relativePosition?.x ?? 0,
-                          y: value ?? 0,
-                        },
+                        relativePosition: { x: newX, y: newY },
+                        position: { x: parentPos.x + newX, y: parentPos.y + newY },
                       });
                     }}
                     style={{ width: '100%' }}
@@ -718,35 +724,39 @@ const PropertyPanel: React.FC = () => {
                   添加子级
                 </Button>
               </div>
-              {selectedComponent.children && selectedComponent.children.length > 0 ? (
-                <div className={styles.childrenList}>
-                  {selectedComponent.children.map((child) => (
-                    <div key={child.id} className={styles.childItem}>
-                      <span className={styles.childName}>{child.name}</span>
-                      <span className={styles.childId}>({child.id.slice(0, 8)}...)</span>
-                      <Button
-                        size="small"
-                        type="link"
-                        onClick={() => selectComponent(child.id)}
-                      >
-                        选中
-                      </Button>
-                      <Button
-                        size="small"
-                        type="text"
-                        icon={<DisconnectOutlined />}
-                        onClick={() => {
-                          // 解除子级绑定
-                          setParentComponent(child.id, null);
-                        }}
-                        danger
-                      />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <span className={styles.noChildren}>暂无子级组件</span>
-              )}
+              {/* 扁平化架构：从 components 中查找子组件 */}
+              {(() => {
+                const childComponents = components.filter(c => c.parentId === selectedComponent.id);
+                return childComponents.length > 0 ? (
+                  <div className={styles.childrenList}>
+                    {childComponents.map((child) => (
+                      <div key={child.id} className={styles.childItem}>
+                        <span className={styles.childName}>{child.name}</span>
+                        <span className={styles.childId}>({child.id.slice(0, 8)}...)</span>
+                        <Button
+                          size="small"
+                          type="link"
+                          onClick={() => selectComponent(child.id)}
+                        >
+                          选中
+                        </Button>
+                        <Button
+                          size="small"
+                          type="text"
+                          icon={<DisconnectOutlined />}
+                          onClick={() => {
+                            // 解除子级绑定
+                            setParentComponent(child.id, null);
+                          }}
+                          danger
+                        />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <span className={styles.noChildren}>暂无子级组件</span>
+                );
+              })()}
             </div>
           </div>
         ),
