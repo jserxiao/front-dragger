@@ -25,12 +25,14 @@ import {
   ZoomInOutlined,
   ZoomOutOutlined,
   AppstoreAddOutlined,
+  ImportOutlined,
 } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
 import { ComponentRegistry } from '@/core';
 import { SHORTCUTS, getShortcutText } from '@/constants';
 import { ComponentNode } from '@/types';
 import { BatchAddModal, TreeNodeData } from '@/components/BatchAddModal';
+import { ImportComponentModal } from '@/components/ImportComponentModal';
 import styles from './Toolbar.module.css';
 
 /**
@@ -78,6 +80,9 @@ const Toolbar: React.FC = () => {
 
   // 批量添加组件的 Modal
   const [batchAddModalVisible, setBatchAddModalVisible] = useState(false);
+
+  // 导入自定义组件的 Modal
+  const [importComponentModalVisible, setImportComponentModalVisible] = useState(false);
 
   // 获取 addComponent 方法
   const addComponent = useEditorStore((state) => state.addComponent);
@@ -458,6 +463,15 @@ const Toolbar: React.FC = () => {
               批量添加
             </Button>
           </Tooltip>
+          <Tooltip title="导入自定义组件">
+            <Button
+              type="text"
+              icon={<ImportOutlined />}
+              onClick={() => setImportComponentModalVisible(true)}
+            >
+              导入组件
+            </Button>
+          </Tooltip>
 
           <div className={styles.divider} />
 
@@ -536,7 +550,7 @@ const Toolbar: React.FC = () => {
         </Space>
       </div>
 
-      {/* 导入 Modal */}
+      {/* 导入配置 Modal */}
       <Modal
         title="导入配置"
         open={importModalVisible}
@@ -560,6 +574,15 @@ const Toolbar: React.FC = () => {
         visible={batchAddModalVisible}
         onCancel={() => setBatchAddModalVisible(false)}
         onConfirm={handleBatchAddConfirm}
+      />
+
+      {/* 导入自定义组件 Modal */}
+      <ImportComponentModal
+        visible={importComponentModalVisible}
+        onClose={() => setImportComponentModalVisible(false)}
+        onSuccess={() => {
+          setImportComponentModalVisible(false);
+        }}
       />
     </div>
   );

@@ -26,6 +26,11 @@ import {
   OrderedListOutlined,
   UnorderedListOutlined,
   LineOutlined,
+  // 新增图标
+  NumberOutlined,
+  ClockCircleOutlined,
+  DownOutlined,
+  SettingOutlined,
 } from '@ant-design/icons';
 
 /**
@@ -1249,6 +1254,922 @@ export const PRESET_COMPONENTS: ComponentConfig[] = [
     ],
     allowChildren: false,
     defaultSize: { width: '100%', height: 'auto' },
+  },
+
+  // ============ 更多 Typography 组件 ============
+  {
+    type: 'Typography.Title',
+    name: '标题',
+    icon: <FileTextOutlined />,
+    category: 'display',
+    defaultProps: {
+      children: '标题文字',
+      level: 2,
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'children',
+        label: '文本内容',
+        type: 'string',
+        defaultValue: '标题文字',
+        group: '基础',
+      },
+      {
+        name: 'level',
+        label: '标题级别',
+        type: 'select',
+        defaultValue: 2,
+        options: [
+          { label: 'H1', value: 1 },
+          { label: 'H2', value: 2 },
+          { label: 'H3', value: 3 },
+          { label: 'H4', value: 4 },
+          { label: 'H5', value: 5 },
+        ],
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'Typography.Paragraph',
+    name: '段落',
+    icon: <FileTextOutlined />,
+    category: 'display',
+    defaultProps: {
+      children: '这是一段段落文字，可以包含多行内容。',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'children',
+        label: '文本内容',
+        type: 'string',
+        defaultValue: '这是一段段落文字，可以包含多行内容。',
+        group: '基础',
+      },
+      {
+        name: 'ellipsis',
+        label: '自动溢出省略',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  // ============ 更多表单组件 ============
+  {
+    type: 'InputNumber',
+    name: '数字输入框',
+    icon: <NumberOutlined />,
+    category: 'form',
+    defaultProps: {
+      placeholder: '请输入数字',
+      min: 0,
+      max: 100,
+      size: 'middle',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'placeholder',
+        label: '占位文本',
+        type: 'string',
+        defaultValue: '请输入数字',
+        group: '基础',
+      },
+      {
+        name: 'min',
+        label: '最小值',
+        type: 'number',
+        defaultValue: 0,
+        group: '基础',
+      },
+      {
+        name: 'max',
+        label: '最大值',
+        type: 'number',
+        defaultValue: 100,
+        group: '基础',
+      },
+      {
+        name: 'size',
+        label: '尺寸',
+        type: 'select',
+        defaultValue: 'middle',
+        options: [
+          { label: '大', value: 'large' },
+          { label: '中', value: 'middle' },
+          { label: '小', value: 'small' },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'disabled',
+        label: '禁用',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 200, height: 'auto' },
+  },
+
+  {
+    type: 'TimePicker',
+    name: '时间选择',
+    icon: <ClockCircleOutlined />,
+    category: 'form',
+    defaultProps: {
+      placeholder: '请选择时间',
+      format: 'HH:mm:ss',
+      size: 'middle',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'placeholder',
+        label: '占位文本',
+        type: 'string',
+        defaultValue: '请选择时间',
+        group: '基础',
+      },
+      {
+        name: 'format',
+        label: '时间格式',
+        type: 'string',
+        defaultValue: 'HH:mm:ss',
+        group: '基础',
+      },
+      {
+        name: 'size',
+        label: '尺寸',
+        type: 'select',
+        defaultValue: 'middle',
+        options: [
+          { label: '大', value: 'large' },
+          { label: '中', value: 'middle' },
+          { label: '小', value: 'small' },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'disabled',
+        label: '禁用',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 200, height: 'auto' },
+  },
+
+  // ============ 布局组件 ============
+  {
+    type: 'Tabs',
+    name: '标签页',
+    icon: <SplitCellsOutlined />,
+    category: 'layout',
+    defaultProps: {
+      items: [
+        { key: '1', label: '标签一', children: '标签一内容' },
+        { key: '2', label: '标签二', children: '标签二内容' },
+        { key: '3', label: '标签三', children: '标签三内容' },
+      ],
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'type',
+        label: '类型',
+        type: 'select',
+        defaultValue: 'line',
+        options: [
+          { label: '线条', value: 'line' },
+          { label: '卡片', value: 'card' },
+          { label: '可编辑', value: 'editable-card' },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'size',
+        label: '尺寸',
+        type: 'select',
+        defaultValue: 'middle',
+        options: [
+          { label: '大', value: 'large' },
+          { label: '中', value: 'middle' },
+          { label: '小', value: 'small' },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'tabPosition',
+        label: '位置',
+        type: 'select',
+        defaultValue: 'top',
+        options: [
+          { label: '顶部', value: 'top' },
+          { label: '底部', value: 'bottom' },
+          { label: '左侧', value: 'left' },
+          { label: '右侧', value: 'right' },
+        ],
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: '100%', height: 150 },
+  },
+
+  {
+    type: 'Collapse',
+    name: '折叠面板',
+    icon: <DownOutlined />,
+    category: 'layout',
+    defaultProps: {
+      items: [
+        { key: '1', label: '面板一', children: '面板一内容' },
+        { key: '2', label: '面板二', children: '面板二内容' },
+      ],
+      accordion: false,
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'accordion',
+        label: '手风琴模式',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+      {
+        name: 'ghost',
+        label: '幽灵模式',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: '100%', height: 'auto' },
+  },
+
+  // ============ 表单容器组件 ============
+  {
+    type: 'Form',
+    name: '表单',
+    icon: <ProfileOutlined />,
+    category: 'form',
+    defaultProps: {
+      layout: 'vertical',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'layout',
+        label: '布局方式',
+        type: 'select',
+        defaultValue: 'vertical',
+        options: [
+          { label: '垂直', value: 'vertical' },
+          { label: '水平', value: 'horizontal' },
+          { label: '行内', value: 'inline' },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'labelCol',
+        label: '标签宽度',
+        type: 'number',
+        defaultValue: 6,
+        min: 1,
+        max: 24,
+        group: '基础',
+      },
+      {
+        name: 'wrapperCol',
+        label: '控件宽度',
+        type: 'number',
+        defaultValue: 18,
+        min: 1,
+        max: 24,
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: '100%', height: 'auto' },
+  },
+
+  {
+    type: 'Form.Item',
+    name: '表单项',
+    icon: <FormOutlined />,
+    category: 'form',
+    defaultProps: {
+      label: '表单项',
+      name: 'field',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'label',
+        label: '标签',
+        type: 'string',
+        defaultValue: '表单项',
+        group: '基础',
+      },
+      {
+        name: 'name',
+        label: '字段名',
+        type: 'string',
+        defaultValue: 'field',
+        group: '基础',
+      },
+      {
+        name: 'required',
+        label: '必填',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+      {
+        name: 'rules',
+        label: '验证规则',
+        type: 'string',
+        defaultValue: '',
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: '100%', height: 'auto' },
+  },
+
+  // ============ 导航组件 ============
+  {
+    type: 'Breadcrumb',
+    name: '面包屑',
+    icon: <UnorderedListOutlined />,
+    category: 'layout',
+    defaultProps: {
+      items: [
+        { title: '首页' },
+        { title: '应用中心' },
+        { title: '应用列表' },
+      ],
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'separator',
+        label: '分隔符',
+        type: 'string',
+        defaultValue: '/',
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'Steps',
+    name: '步骤条',
+    icon: <UnorderedListOutlined />,
+    category: 'layout',
+    defaultProps: {
+      current: 1,
+      items: [
+        { title: '已完成', description: '这是描述' },
+        { title: '进行中', description: '这是描述' },
+        { title: '待处理', description: '这是描述' },
+      ],
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'current',
+        label: '当前步骤',
+        type: 'number',
+        defaultValue: 1,
+        min: 0,
+        group: '基础',
+      },
+      {
+        name: 'size',
+        label: '尺寸',
+        type: 'select',
+        defaultValue: 'default',
+        options: [
+          { label: '默认', value: 'default' },
+          { label: '小', value: 'small' },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'direction',
+        label: '方向',
+        type: 'select',
+        defaultValue: 'horizontal',
+        options: [
+          { label: '水平', value: 'horizontal' },
+          { label: '垂直', value: 'vertical' },
+        ],
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: '100%', height: 'auto' },
+  },
+
+  // ============ 更多展示组件 ============
+  {
+    type: 'Empty',
+    name: '空状态',
+    icon: <AlertOutlined />,
+    category: 'display',
+    defaultProps: {
+      description: '暂无数据',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'description',
+        label: '描述文字',
+        type: 'string',
+        defaultValue: '暂无数据',
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'Result',
+    name: '结果页',
+    icon: <RocketOutlined />,
+    category: 'display',
+    defaultProps: {
+      status: 'success',
+      title: '操作成功',
+      subTitle: '这是一条成功提示信息',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'status',
+        label: '状态',
+        type: 'select',
+        defaultValue: 'success',
+        options: [
+          { label: '成功', value: 'success' },
+          { label: '错误', value: 'error' },
+          { label: '信息', value: 'info' },
+          { label: '警告', value: 'warning' },
+          { label: '404', value: '404' },
+          { label: '403', value: '403' },
+          { label: '500', value: '500' },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'title',
+        label: '标题',
+        type: 'string',
+        defaultValue: '操作成功',
+        group: '基础',
+      },
+      {
+        name: 'subTitle',
+        label: '副标题',
+        type: 'string',
+        defaultValue: '这是一条成功提示信息',
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: '100%', height: 'auto' },
+  },
+
+  {
+    type: 'Skeleton',
+    name: '骨架屏',
+    icon: <LoadingOutlined />,
+    category: 'display',
+    defaultProps: {
+      active: true,
+      paragraph: { rows: 4 },
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'active',
+        label: '动画效果',
+        type: 'boolean',
+        defaultValue: true,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: '100%', height: 'auto' },
+  },
+
+  {
+    type: 'Timeline',
+    name: '时间轴',
+    icon: <ClockCircleOutlined />,
+    category: 'display',
+    defaultProps: {
+      items: [
+        { children: '创建 2015-09-01', color: 'green' },
+        { children: '初审 2015-09-01', color: 'blue' },
+        { children: '二审 2015-09-01', color: 'red' },
+        { children: '终审 2015-09-01' },
+      ],
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'mode',
+        label: '模式',
+        type: 'select',
+        defaultValue: 'left',
+        options: [
+          { label: '左侧', value: 'left' },
+          { label: '右侧', value: 'right' },
+          { label: '交替', value: 'alternate' },
+        ],
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'Tree',
+    name: '树形控件',
+    icon: <UnorderedListOutlined />,
+    category: 'display',
+    defaultProps: {
+      treeData: [
+        { title: '节点一', key: '0-0', children: [{ title: '子节点', key: '0-0-0' }] },
+        { title: '节点二', key: '0-1' },
+      ],
+      defaultExpandAll: true,
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'showLine',
+        label: '显示连接线',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+      {
+        name: 'defaultExpandAll',
+        label: '默认展开',
+        type: 'boolean',
+        defaultValue: true,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 200, height: 'auto' },
+  },
+
+  {
+    type: 'List',
+    name: '列表',
+    icon: <UnorderedListOutlined />,
+    category: 'display',
+    defaultProps: {
+      dataSource: ['项目一', '项目二', '项目三'],
+      renderItem: (item: string) => item,
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'size',
+        label: '尺寸',
+        type: 'select',
+        defaultValue: 'default',
+        options: [
+          { label: '默认', value: 'default' },
+          { label: '小', value: 'small' },
+          { label: '大', value: 'large' },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'bordered',
+        label: '显示边框',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: '100%', height: 'auto' },
+  },
+
+  // ============ 数据录入扩展 ============
+  {
+    type: 'Cascader',
+    name: '级联选择',
+    icon: <DownOutlined />,
+    category: 'form',
+    defaultProps: {
+      placeholder: '请选择',
+      options: [
+        {
+          value: 'zhejiang',
+          label: '浙江',
+          children: [{ value: 'hangzhou', label: '杭州' }],
+        },
+        {
+          value: 'jiangsu',
+          label: '江苏',
+          children: [{ value: 'nanjing', label: '南京' }],
+        },
+      ],
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'placeholder',
+        label: '占位文本',
+        type: 'string',
+        defaultValue: '请选择',
+        group: '基础',
+      },
+      {
+        name: 'disabled',
+        label: '禁用',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 200, height: 'auto' },
+  },
+
+  {
+    type: 'Transfer',
+    name: '穿梭框',
+    icon: <SplitCellsOutlined />,
+    category: 'form',
+    defaultProps: {
+      dataSource: [
+        { key: '1', title: '选项一' },
+        { key: '2', title: '选项二' },
+        { key: '3', title: '选项三' },
+      ],
+      targetKeys: ['1'],
+      titles: ['源列表', '目标列表'],
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'showSearch',
+        label: '显示搜索',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+      {
+        name: 'disabled',
+        label: '禁用',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 500, height: 'auto' },
+  },
+
+  // ============ 其他组件 ============
+  {
+    type: 'Segmented',
+    name: '分段控制器',
+    icon: <SplitCellsOutlined />,
+    category: 'basic',
+    defaultProps: {
+      options: ['日', '周', '月', '季', '年'],
+      value: '日',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'block',
+        label: '宽度撑满',
+        type: 'boolean',
+        defaultValue: false,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'Pagination',
+    name: '分页',
+    icon: <UnorderedListOutlined />,
+    category: 'display',
+    defaultProps: {
+      total: 100,
+      showSizeChanger: true,
+      showQuickJumper: true,
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'total',
+        label: '总数',
+        type: 'number',
+        defaultValue: 100,
+        group: '基础',
+      },
+      {
+        name: 'pageSize',
+        label: '每页条数',
+        type: 'select',
+        defaultValue: 10,
+        options: [
+          { label: '10条', value: 10 },
+          { label: '20条', value: 20 },
+          { label: '50条', value: 50 },
+          { label: '100条', value: 100 },
+        ],
+        group: '基础',
+      },
+      {
+        name: 'showSizeChanger',
+        label: '显示条数选择',
+        type: 'boolean',
+        defaultValue: true,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'Calendar',
+    name: '日历',
+    icon: <CalendarOutlined />,
+    category: 'display',
+    defaultProps: {},
+    defaultStyle: {},
+    propSchema: [],
+    allowChildren: false,
+    defaultSize: { width: 300, height: 300 },
+  },
+
+  {
+    type: 'QRCode',
+    name: '二维码',
+    icon: <CodeOutlined />,
+    category: 'display',
+    defaultProps: {
+      value: 'https://ant.design/',
+      size: 128,
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'value',
+        label: '二维码内容',
+        type: 'string',
+        defaultValue: 'https://ant.design/',
+        group: '基础',
+      },
+      {
+        name: 'size',
+        label: '尺寸',
+        type: 'number',
+        defaultValue: 128,
+        min: 32,
+        max: 512,
+        group: '基础',
+      },
+    ],
+    allowChildren: false,
+    defaultSize: { width: 128, height: 128 },
+  },
+
+  {
+    type: 'Popover',
+    name: '气泡卡片',
+    icon: <AlertOutlined />,
+    category: 'display',
+    defaultProps: {
+      title: '标题',
+      content: '这是气泡卡片的内容',
+      trigger: 'click',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'title',
+        label: '标题',
+        type: 'string',
+        defaultValue: '标题',
+        group: '基础',
+      },
+      {
+        name: 'trigger',
+        label: '触发方式',
+        type: 'select',
+        defaultValue: 'click',
+        options: [
+          { label: '点击', value: 'click' },
+          { label: '悬停', value: 'hover' },
+        ],
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'Tooltip',
+    name: '文字提示',
+    icon: <InfoCircleOutlined />,
+    category: 'display',
+    defaultProps: {
+      title: '提示文字',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'title',
+        label: '提示内容',
+        type: 'string',
+        defaultValue: '提示文字',
+        group: '基础',
+      },
+      {
+        name: 'placement',
+        label: '位置',
+        type: 'select',
+        defaultValue: 'top',
+        options: [
+          { label: '上方', value: 'top' },
+          { label: '下方', value: 'bottom' },
+          { label: '左侧', value: 'left' },
+          { label: '右侧', value: 'right' },
+        ],
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: 'auto', height: 'auto' },
+  },
+
+  {
+    type: 'Watermark',
+    name: '水印',
+    icon: <SettingOutlined />,
+    category: 'layout',
+    defaultProps: {
+      content: 'Ant Design',
+    },
+    defaultStyle: {},
+    propSchema: [
+      {
+        name: 'content',
+        label: '水印内容',
+        type: 'string',
+        defaultValue: 'Ant Design',
+        group: '基础',
+      },
+      {
+        name: 'fontSize',
+        label: '字体大小',
+        type: 'number',
+        defaultValue: 16,
+        min: 8,
+        max: 32,
+        group: '基础',
+      },
+    ],
+    allowChildren: true,
+    defaultSize: { width: '100%', height: 200 },
   },
 
   // ============ 原生HTML元素 ============

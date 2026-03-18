@@ -1,0 +1,22 @@
+.tips {
+  margin: 0;
+  padding-left: 16px;
+  color: #666;
+}
+
+.tips li {
+  margin-bottom: 4px;
+}
+
+.customIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: #1890ff;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+}

@@ -1,8 +1,8 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Input, Collapse, Empty } from 'antd';
 import { SearchOutlined } from '@ant-design/icons';
 import { useDraggable } from '@dnd-kit/core';
-import { ComponentRegistry } from '@/core';
+import { ComponentRegistry, onComponentChange } from '@/core';
 import { ComponentConfig, ComponentCategory } from '@/types';
 import styles from './ComponentPanel.module.css';
 
@@ -49,7 +49,25 @@ const DraggableComponentItem: React.FC<DraggableComponentItemProps> = ({
  */
 const ComponentPanel: React.FC = () => {
   const [searchKeyword, setSearchKeyword] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0);
   const categories = ComponentRegistry.getCategories();
+
+  // 加载自定义组件
+  useEffect(() => {
+    ComponentRegistry.loadCustomComponents().then(() => {
+      setRefreshKey((prev) => prev + 1);
+    });
+  }, []);
+
+  // 监听组件变更（导入新组件时刷新）
+  useEffect(() => {
+    const unsubscribe = onComponentChange(() => {
+      ComponentRegistry.loadCustomComponents().then(() => {
+        setRefreshKey((prev) => prev + 1);
+      });
+    });
+    return unsubscribe;
+  }, []);
 
   // 过滤组件
   const filteredComponents = useMemo(() => {
@@ -57,7 +75,7 @@ const ComponentPanel: React.FC = () => {
       return null;
     }
     return ComponentRegistry.searchComponents(searchKeyword);
-  }, [searchKeyword]);
+  }, [searchKeyword, refreshKey]);
 
   // 按分类获取组件
   const getComponentsByCategory = (category: ComponentCategory) => {

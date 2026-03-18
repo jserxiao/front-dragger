@@ -94,26 +94,70 @@ const CodeEditor = () => {
     // 添加 antd 类型定义
     monaco.languages.typescript.typescriptDefaults.addExtraLib(`
       declare module 'antd' {
+        // 基础组件
         export const Button: React.FC<any>;
         export const Input: React.FC<any>;
+        export const InputNumber: React.FC<any>;
         export const Select: React.FC<any>;
         export const Checkbox: React.FC<any>;
         export const Switch: React.FC<any>;
         export const DatePicker: React.FC<any>;
+        export const TimePicker: React.FC<any>;
         export const Upload: React.FC<any>;
+        export const Segmented: React.FC<any>;
+        
+        // 布局组件
         export const Card: React.FC<any>;
         export const Divider: React.FC<any>;
+        export const Tabs: React.FC<any>;
+        export const Collapse: React.FC<any>;
+        export const Breadcrumb: React.FC<any>;
+        export const Steps: React.FC<any>;
+        export const Watermark: React.FC<any>;
+        
+        // 展示组件
         export const Image: React.FC<any>;
         export const Statistic: React.FC<any>;
         export const Descriptions: React.FC<any>;
+        export const Tag: React.FC<any>;
+        export const Badge: React.FC<any>;
+        export const Avatar: React.FC<any>;
+        export const Table: React.FC<any>;
+        export const Timeline: React.FC<any>;
+        export const Tree: React.FC<any>;
+        export const List: React.FC<any>;
+        export const Empty: React.FC<any>;
+        export const Result: React.FC<any>;
+        export const Skeleton: React.FC<any>;
+        export const Pagination: React.FC<any>;
+        export const Calendar: React.FC<any>;
+        export const QRCode: React.FC<any>;
+        export const Popover: React.FC<any>;
+        export const Tooltip: React.FC<any>;
+        
+        // 表单组件
+        export const Form: React.FC<any> & { Item: React.FC<any> };
+        export const Rate: React.FC<any>;
+        export const Slider: React.FC<any>;
+        export const Radio: React.FC<any> & { Group: React.FC<any> };
+        export const Cascader: React.FC<any>;
+        export const Transfer: React.FC<any>;
+        
+        // 反馈组件
+        export const Modal: React.FC<any>;
+        export const Drawer: React.FC<any>;
+        export const Alert: React.FC<any>;
+        export const Progress: React.FC<any>;
+        export const Spin: React.FC<any>;
+        
+        // Typography
         export const Typography: {
           Text: React.FC<any>;
           Title: React.FC<any>;
           Paragraph: React.FC<any>;
         };
-        export const Form: React.FC<any>;
-        export const Table: React.FC<any>;
-        export const Modal: React.FC<any>;
+        
+        // message
         export const message: {
           success: (content: string) => void;
           error: (content: string) => void;
