@@ -66,15 +66,36 @@ interface GridLabelsProps {
   offset: { x: number; y: number };
   scale: number;
   gridSize: number;
+  containerRef: React.RefObject<HTMLDivElement>;
 }
 
-const GridLabels: React.FC<GridLabelsProps> = ({ offset, scale, gridSize }) => {
+const GridLabels: React.FC<GridLabelsProps> = ({ offset, scale, gridSize, containerRef }) => {
+  // 容器尺寸状态
+  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
+  
+  // 监听容器尺寸变化
+  useEffect(() => {
+    const updateSize = () => {
+      if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
+    };
+    
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    return () => window.removeEventListener('resize', updateSize);
+  }, [containerRef]);
+  
   // 计算需要显示的网格线标注
   const labels = useMemo(() => {
     const result: Array<{ type: 'x' | 'y'; position: number; value: number; screenPos: number }> = [];
     
-    // 获取视口尺寸
-    if (typeof window === 'undefined') return result;
+    // 如果容器尺寸为0，使用备用的窗口尺寸
+    const visibleWidth = containerSize.width || (typeof window !== 'undefined' ? window.innerWidth : 0);
+    const visibleHeight = containerSize.height || (typeof window !== 'undefined' ? window.innerHeight : 0);
+    
+    if (visibleWidth === 0 || visibleHeight === 0) return result;
     
     // 计算网格在画布坐标系中的实际尺寸
     const scaledGridSize = gridSize * scale;
@@ -82,7 +103,7 @@ const GridLabels: React.FC<GridLabelsProps> = ({ offset, scale, gridSize }) => {
     // 计算可见区域内的网格线
     // X 方向
     const startX = Math.floor(-offset.x / scaledGridSize) * gridSize;
-    const endX = Math.ceil((window.innerWidth - offset.x) / scaledGridSize) * gridSize;
+    const endX = Math.ceil((visibleWidth - offset.x) / scaledGridSize) * gridSize;
     
     for (let value = startX; value <= endX; value += gridSize) {
       const screenPos = value * scale + offset.x;
@@ -94,7 +115,7 @@ const GridLabels: React.FC<GridLabelsProps> = ({ offset, scale, gridSize }) => {
     
     // Y 方向
     const startY = Math.floor(-offset.y / scaledGridSize) * gridSize;
-    const endY = Math.ceil((window.innerHeight - offset.y) / scaledGridSize) * gridSize;
+    const endY = Math.ceil((visibleHeight - offset.y) / scaledGridSize) * gridSize;
     
     for (let value = startY; value <= endY; value += gridSize) {
       const screenPos = value * scale + offset.y;
@@ -105,7 +126,7 @@ const GridLabels: React.FC<GridLabelsProps> = ({ offset, scale, gridSize }) => {
     }
     
     return result;
-  }, [offset, scale, gridSize]);
+  }, [offset, scale, gridSize, containerSize]);
   
   return (
     <g>
@@ -243,6 +264,7 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
     addComponent,
     setDragOverCanvas,
     dragPreview,
+    alignmentSnap,
   } = useEditorStore();
 
   const { scale, offset, gridSize, showGrid, snapToGrid, selectedIds, canvasStyle } = canvas;
@@ -504,6 +526,13 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
     }
   }, [dragPreview, calculateAlignmentLines, clearAlignmentLines]);
 
+  // 监听 alignmentSnap 变化，当都为 null 时确保清除对齐线
+  useEffect(() => {
+    if (alignmentSnap.offsetX === null && alignmentSnap.offsetY === null) {
+      setAlignmentLines([]);
+    }
+  }, [alignmentSnap]);
+
   // 渲染组件
   const renderComponent = (component: ComponentNode): React.ReactNode => {
     const Component = ComponentMap[component.type];
@@ -623,6 +652,7 @@ const Canvas: React.FC<CanvasProps> = ({ className }) => {
               offset={offset}
               scale={scale}
               gridSize={gridSize}
+              containerRef={canvasRef}
             />
           </svg>
         )}

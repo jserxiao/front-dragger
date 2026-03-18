@@ -33,6 +33,7 @@ const App: React.FC = () => {
     dragPreview,
     alignmentSnap,
     moveComponent,
+    setAlignmentSnap,
   } = useEditorStore();
 
   // 当前拖拽的组件配置
@@ -45,6 +46,9 @@ const App: React.FC = () => {
   // 拖拽起始位置
   const dragStartPos = useRef({ x: 0, y: 0 });
   const activatorEventRef = useRef<PointerEvent | null>(null);
+  
+  // 拖拽时鼠标相对于组件左上角的偏移
+  const dragOffsetRef = useRef({ x: 0, y: 0 });
 
   // 配置拖拽传感器
   const sensors = useSensors(
@@ -141,11 +145,26 @@ const App: React.FC = () => {
         setActiveConfig(null);
         
         // 设置拖拽预览
-        // 移动已有组件时，预览位置就是组件原本的位置（左上角）
-        // 注意：移动已有组件不需要 modifier 偏移，因为用户点击位置就是相对于组件的
+        // 移动已有组件时，计算鼠标相对于组件左上角的偏移
         if (component) {
           const width = typeof component.size.width === 'number' ? component.size.width : 100;
           const height = typeof component.size.height === 'number' ? component.size.height : 40;
+          
+          // 计算鼠标相对于组件左上角的偏移
+          // 获取画布元素用于计算
+          const canvasEl = document.querySelector('[data-canvas="true"]') as HTMLElement;
+          if (canvasEl) {
+            const canvasRect = canvasEl.getBoundingClientRect();
+            // 组件在屏幕上的位置
+            const compScreenX = canvasRect.left + canvas.offset.x + component.position.x * canvas.scale;
+            const compScreenY = canvasRect.top + canvas.offset.y + component.position.y * canvas.scale;
+            // 鼠标相对于组件左上角的偏移
+            dragOffsetRef.current = {
+              x: startEvent.clientX - compScreenX,
+              y: startEvent.clientY - compScreenY,
+            };
+          }
+          
           setDragPreview({
             position: { 
               x: component.position.x,
@@ -201,14 +220,20 @@ const App: React.FC = () => {
           });
         }
       } else if (activeComponent) {
-        // 移动已有组件 - 使用鼠标实时位置计算
-        const startEvent = activatorEventRef.current;
-        if (startEvent) {
-          const deltaX = mousePosition.x - startEvent.clientX;
-          const deltaY = mousePosition.y - startEvent.clientY;
+        // 移动已有组件 - 使用鼠标实时位置和偏移计算
+        // 计算画布坐标
+        const canvasEl = document.querySelector('[data-canvas="true"]') as HTMLElement;
+        if (canvasEl) {
+          const canvasRect = canvasEl.getBoundingClientRect();
           
-          const newX = Math.max(0, activeComponent.position.x + deltaX / canvas.scale);
-          const newY = Math.max(0, activeComponent.position.y + deltaY / canvas.scale);
+          // 鼠标位置减去偏移，得到组件左上角应该在的屏幕位置
+          const compScreenX = mousePosition.x - dragOffsetRef.current.x;
+          const compScreenY = mousePosition.y - dragOffsetRef.current.y;
+          
+          // 转换为画布坐标
+          const newX = Math.max(0, (compScreenX - canvasRect.left - canvas.offset.x) / canvas.scale);
+          const newY = Math.max(0, (compScreenY - canvasRect.top - canvas.offset.y) / canvas.scale);
+          
           const width = typeof activeComponent.size.width === 'number' ? activeComponent.size.width : 100;
           const height = typeof activeComponent.size.height === 'number' ? activeComponent.size.height : 40;
           
@@ -293,7 +318,6 @@ const App: React.FC = () => {
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
-      const startEvent = activatorEventRef.current;
 
       // 保存当前鼠标位置用于计算
       const currentMousePos = mousePosition;
@@ -305,6 +329,8 @@ const App: React.FC = () => {
       setDragPreview({ position: null, size: null, draggingId: null });
       setMousePosition(null);
       activatorEventRef.current = null;
+      // 清除对齐吸附状态
+      setAlignmentSnap({ offsetX: null, offsetY: null });
 
       const activeData = active.data.current;
 
@@ -405,7 +431,6 @@ const App: React.FC = () => {
       // 移动已有组件
       if (activeData?.type === 'move') {
         const componentId = activeData.componentId;
-        // startEvent 已经在上面获取了
 
         // 找到组件当前位置
         const findComponent = (
@@ -423,30 +448,37 @@ const App: React.FC = () => {
         };
 
         const component = findComponent(components, componentId);
-        if (component && startEvent && currentMousePos) {
-          // 使用保存的鼠标实时位置计算偏移
-          const deltaX = currentMousePos.x - startEvent.clientX;
-          const deltaY = currentMousePos.y - startEvent.clientY;
-          
-          let newX = component.position.x + deltaX / canvas.scale;
-          let newY = component.position.y + deltaY / canvas.scale;
+        if (component && currentMousePos) {
+          // 使用鼠标位置和偏移计算最终位置
+          const canvasEl = document.querySelector('[data-canvas="true"]') as HTMLElement;
+          if (canvasEl) {
+            const canvasRect = canvasEl.getBoundingClientRect();
+            
+            // 鼠标位置减去偏移，得到组件左上角应该在的屏幕位置
+            const compScreenX = currentMousePos.x - dragOffsetRef.current.x;
+            const compScreenY = currentMousePos.y - dragOffsetRef.current.y;
+            
+            // 转换为画布坐标
+            let newX = Math.max(0, (compScreenX - canvasRect.left - canvas.offset.x) / canvas.scale);
+            let newY = Math.max(0, (compScreenY - canvasRect.top - canvas.offset.y) / canvas.scale);
 
-          // 应用对齐吸附偏移
-          if (alignmentSnap.offsetX !== null) {
-            newX += alignmentSnap.offsetX;
+            // 应用对齐吸附偏移
+            if (alignmentSnap.offsetX !== null) {
+              newX += alignmentSnap.offsetX;
+            }
+            if (alignmentSnap.offsetY !== null) {
+              newY += alignmentSnap.offsetY;
+            }
+
+            // 确保位置非负，并吸附到最近的整数坐标
+            newX = Math.max(0, Math.round(newX));
+            newY = Math.max(0, Math.round(newY));
+
+            moveComponent(componentId, {
+              x: newX,
+              y: newY,
+            });
           }
-          if (alignmentSnap.offsetY !== null) {
-            newY += alignmentSnap.offsetY;
-          }
-
-          // 确保位置非负，并吸附到最近的整数坐标
-          newX = Math.max(0, Math.round(newX));
-          newY = Math.max(0, Math.round(newY));
-
-          moveComponent(componentId, {
-            x: newX,
-            y: newY,
-          });
         }
       }
     },
@@ -515,8 +547,8 @@ const App: React.FC = () => {
           <div
             style={{
               position: 'fixed',
-              left: mousePosition.x - (typeof dragPreview.size.width === 'number' ? dragPreview.size.width : 100) / 2,
-              top: mousePosition.y - (typeof dragPreview.size.height === 'number' ? dragPreview.size.height : 40) / 2,
+              left: mousePosition.x - dragOffsetRef.current.x,
+              top: mousePosition.y - dragOffsetRef.current.y,
               pointerEvents: 'none',
               zIndex: 9999,
             }}

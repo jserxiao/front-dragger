@@ -12,7 +12,7 @@ import {
   Upload,
 } from 'antd';
 import type { Color } from 'antd/es/color-picker';
-import { DeleteOutlined, SettingOutlined, PictureOutlined, UploadOutlined, AppstoreOutlined } from '@ant-design/icons';
+import { DeleteOutlined, SettingOutlined, PictureOutlined, UploadOutlined, AppstoreOutlined, PlusOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import { useEditorStore } from '@/store';
 import { ComponentRegistry } from '@/core';
 import { PropSchema, CanvasStyle } from '@/types';
@@ -26,9 +26,29 @@ const PropertyPanel: React.FC = () => {
     useEditorStore();
   const { selectedIds, canvasStyle } = canvas;
 
-  // JSON 输入框的本地状态
-  const [jsonInputValue, setJsonInputValue] = useState<string>('');
-  const [jsonError, setJsonError] = useState<string>('');
+  // 自定义属性的本地状态（键值对数组形式）
+  const [extraPropsList, setExtraPropsList] = useState<Array<{ key: string; value: string }>>([]);
+
+  // 解析属性值：尝试转换为数字、布尔值、数组、对象，失败则返回原始字符串
+  const parseValue = (value: string): any => {
+    const trimmed = value.trim();
+    if (!trimmed) return '';
+    
+    // 尝试解析为 JSON（支持数字、布尔值、数组、对象）
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      // 不是有效的 JSON，返回原始字符串
+      return value;
+    }
+  };
+
+  // 将属性值转换为显示字符串
+  const valueToString = (value: any): string => {
+    if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
+    return JSON.stringify(value);
+  };
 
   // 获取选中的组件
   const selectedComponent = useMemo(() => {
@@ -69,14 +89,17 @@ const PropertyPanel: React.FC = () => {
     });
   };
 
-  // 同步 extraProps 到本地 JSON 输入状态
+  // 同步 extraProps 到本地状态
   useEffect(() => {
     if (selectedComponent?.extraProps) {
-      setJsonInputValue(JSON.stringify(selectedComponent.extraProps, null, 2));
+      const list = Object.entries(selectedComponent.extraProps).map(([key, value]) => ({
+        key,
+        value: valueToString(value),
+      }));
+      setExtraPropsList(list.length > 0 ? list : [{ key: '', value: '' }]);
     } else {
-      setJsonInputValue('');
+      setExtraPropsList([{ key: '', value: '' }]);
     }
-    setJsonError('');
   }, [selectedComponent?.id, selectedComponent?.extraProps]);
 
   // 处理样式变更
@@ -488,49 +511,101 @@ const PropertyPanel: React.FC = () => {
       label: '自定义属性',
       children: (
         <div className={styles.propGroup}>
-          <div className={styles.propItem} style={{ flexDirection: 'column' }}>
-            <label className={styles.label}>JSON 属性</label>
-            <Input.TextArea
-              value={jsonInputValue}
-              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => {
-                const value = e.target.value;
-                setJsonInputValue(value);
-                
-                const trimmedValue = value.trim();
-                if (!trimmedValue) {
-                  // 清空时删除 extraProps
-                  setJsonError('');
-                  if (selectedComponent) {
-                    updateComponent(selectedComponent.id, { extraProps: undefined });
-                  }
-                  return;
-                }
-                
-                try {
-                  const parsed = JSON.parse(trimmedValue);
-                  setJsonError('');
-                  if (selectedComponent) {
-                    updateComponent(selectedComponent.id, { extraProps: parsed });
-                  }
-                } catch {
-                  // JSON 格式错误时只显示错误提示，不清空输入框，也不更新 extraProps
-                  setJsonError('JSON 格式错误');
-                }
+          <div className={styles.propItem} style={{ flexDirection: 'column', gap: 8 }}>
+            {extraPropsList.map((item, index) => (
+              <div key={index} className={styles.extraPropsRow}>
+                <Input
+                  placeholder="属性名"
+                  value={item.key}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const newList = [...extraPropsList];
+                    newList[index] = { ...newList[index], key: e.target.value };
+                    setExtraPropsList(newList);
+                  }}
+                  onBlur={() => {
+                    // 提交更新
+                    const props: Record<string, any> = {};
+                    extraPropsList.forEach(p => {
+                      if (p.key.trim()) {
+                        props[p.key.trim()] = parseValue(p.value);
+                      }
+                    });
+                    if (selectedComponent) {
+                      updateComponent(selectedComponent.id, {
+                        extraProps: Object.keys(props).length > 0 ? props : undefined,
+                      });
+                    }
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <Input
+                  placeholder="属性值（支持数字、数组、对象）"
+                  value={item.value}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const newList = [...extraPropsList];
+                    newList[index] = { ...newList[index], value: e.target.value };
+                    setExtraPropsList(newList);
+                  }}
+                  onBlur={() => {
+                    // 提交更新
+                    const props: Record<string, any> = {};
+                    extraPropsList.forEach(p => {
+                      if (p.key.trim()) {
+                        props[p.key.trim()] = parseValue(p.value);
+                      }
+                    });
+                    if (selectedComponent) {
+                      updateComponent(selectedComponent.id, {
+                        extraProps: Object.keys(props).length > 0 ? props : undefined,
+                      });
+                    }
+                  }}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  type="text"
+                  icon={<MinusCircleOutlined />}
+                  onClick={() => {
+                    const newList = extraPropsList.filter((_, i) => i !== index);
+                    if (newList.length === 0) {
+                      newList.push({ key: '', value: '' });
+                    }
+                    setExtraPropsList(newList);
+                    // 提交更新
+                    const props: Record<string, any> = {};
+                    newList.forEach(p => {
+                      if (p.key.trim()) {
+                        props[p.key.trim()] = parseValue(p.value);
+                      }
+                    });
+                    if (selectedComponent) {
+                      updateComponent(selectedComponent.id, {
+                        extraProps: Object.keys(props).length > 0 ? props : undefined,
+                      });
+                    }
+                  }}
+                  danger
+                />
+              </div>
+            ))}
+            <Button
+              type="dashed"
+              icon={<PlusOutlined />}
+              onClick={() => {
+                setExtraPropsList([...extraPropsList, { key: '', value: '' }]);
               }}
-              placeholder='{"data-testid": "my-button", "aria-label": "提交"}'
-              autoSize={{ minRows: 3, maxRows: 10 }}
-              style={{ fontFamily: 'monospace', fontSize: 12 }}
-              status={jsonError ? 'error' : undefined}
-            />
-            {jsonError && <span className={styles.error}>{jsonError}</span>}
-            <span className={styles.hint}>输入 JSON 格式的额外属性，将直接映射到组件上</span>
+              style={{ width: '100%' }}
+            >
+              添加属性
+            </Button>
+            <span className={styles.hint}>属性值支持：数字(123)、布尔(true)、数组([1,2])、对象(&#123;...&#125;)</span>
           </div>
         </div>
       ),
     });
 
     return items;
-  }, [selectedComponent, groupedProps, jsonInputValue, jsonError]);
+  }, [selectedComponent, groupedProps, extraPropsList]);
 
   // Tab 状态管理
   const [activeTab, setActiveTab] = useState<string>(selectedComponent ? 'component' : 'canvas');
